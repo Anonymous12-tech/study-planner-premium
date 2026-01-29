@@ -139,3 +139,89 @@ export const getWeekIdentifier = (date: Date = new Date()): string => {
 export const getMonthIdentifier = (date: Date = new Date()): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 };
+
+export const filterSessionsByPeriod = (
+    sessions: StudySession[],
+    period: 'day' | 'week' | 'month',
+    date: string = getTodayDateString()
+): StudySession[] => {
+    const targetDate = new Date(date);
+
+    if (period === 'day') {
+        return (sessions || []).filter(s =>
+            s.endTime && new Date(s.startTime).toISOString().split('T')[0] === date
+        );
+    }
+
+    if (period === 'week') {
+        const weekDates = getWeekDateStrings(); // This gets last 7 days, let's stick to that for "Week"
+        return (sessions || []).filter(s =>
+            s.endTime && weekDates.includes(new Date(s.startTime).toISOString().split('T')[0])
+        );
+    }
+
+    if (period === 'month') {
+        const targetMonth = getMonthIdentifier(targetDate);
+        return (sessions || []).filter(s =>
+            s.endTime && getMonthIdentifier(new Date(s.startTime)) === targetMonth
+        );
+    }
+
+    return [];
+};
+
+export interface AchievementBadge {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    unlocked: boolean;
+}
+
+export const getAchievements = (
+    sessions: StudySession[],
+    dailyStats: DailyStats[]
+): AchievementBadge[] => {
+    const completedSessions = (sessions || []).filter(s => s.endTime);
+    const { longest: longestStreak } = calculateStreak(dailyStats);
+
+    const badges: AchievementBadge[] = [
+        {
+            id: 'early_bird',
+            title: 'Early Bird',
+            description: 'Study before 8:00 AM',
+            icon: '🌅',
+            unlocked: completedSessions.some(s => new Date(s.startTime).getHours() < 8),
+        },
+        {
+            id: 'night_owl',
+            title: 'Night Owl',
+            description: 'Study after 10:00 PM',
+            icon: '🦉',
+            unlocked: completedSessions.some(s => new Date(s.startTime).getHours() >= 22),
+        },
+        {
+            id: 'marathon',
+            title: 'Focus Marathon',
+            description: 'Study for more than 2 hours in one session',
+            icon: '🏃',
+            unlocked: completedSessions.some(s => s.duration > 7200),
+        },
+        {
+            id: 'streak_3',
+            title: 'Consistency King',
+            description: 'Hold a 3-day study streak',
+            icon: '👑',
+            unlocked: longestStreak >= 3,
+        },
+        {
+            id: 'subject_master',
+            title: 'Deep Diver',
+            description: 'Spend 5+ hours on a single subject',
+            icon: '🤿',
+            unlocked: false, // Will calculate based on subject sums if needed
+        }
+    ];
+
+    return badges;
+};

@@ -1,30 +1,45 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Platform, TouchableOpacity, Share, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
 import { Card } from '../components/ui/Card';
 import { getSessions, getDailyStats, getSubjects } from '../utils/storage';
-import { calculateStatistics, formatTime } from '../utils/calculations';
-import { Statistics, Subject } from '../types';
+import {
+    calculateStatistics,
+    formatTime,
+    filterSessionsByPeriod,
+    getAchievements,
+    AchievementBadge
+} from '../utils/calculations';
+import { Statistics, Subject, StudySession } from '../types';
+import { BadgeItem } from '../components/BadgeItem';
+import * as Sharing from 'expo-sharing';
 
 const { width } = Dimensions.get('window');
+
+type PeriodType = 'day' | 'week' | 'month';
 
 export const StatsScreen = () => {
     const [stats, setStats] = useState<Statistics | null>(null);
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [sessions, setSessions] = useState<StudySession[]>([]);
+    const [period, setPeriod] = useState<PeriodType>('week');
+    const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
 
     const loadData = async () => {
-        const [sessions, dailyStats, subjectsData] = await Promise.all([
+        const [sessionsData, dailyStats, subjectsData] = await Promise.all([
             getSessions(),
             getDailyStats(),
             getSubjects(),
         ]);
 
-        const statistics = calculateStatistics(sessions, dailyStats);
+        const statistics = calculateStatistics(sessionsData, dailyStats);
         setStats(statistics);
         setSubjects(subjectsData);
+        setSessions(sessionsData);
+        setAchievements(getAchievements(sessionsData, dailyStats));
     };
 
     useFocusEffect(
@@ -33,19 +48,40 @@ export const StatsScreen = () => {
         }, [])
     );
 
+    const handleShare = async () => {
+        const periodText = period === 'day' ? 'Today' : period === 'week' ? 'this Week' : 'this Month';
+        const periodSessions = filterSessionsByPeriod(sessions, period);
+        const totalMinutes = periodSessions.reduce((acc, s) => acc + s.duration, 0) / 60;
+
+        const message = `🚀 Study Recap: I spent ${Math.floor(totalMinutes)} minutes focusing ${periodText}! \n\nCheck out my progress on StudyPlanner. #DeepFocus #StudyMotivation`;
+
+        try {
+            const result = await Share.share({
+                message,
+                title: 'My Study Recap',
+            });
+        } catch (error: any) {
+            Alert.alert('Sharing Failed', error.message);
+        }
+    };
+
     if (!stats) return null;
 
+    // Filter sessions for recap
+    const recapSessions = filterSessionsByPeriod(sessions, period);
+    const recapTotalMinutes = recapSessions.reduce((acc, s) => acc + s.duration, 0) / 60;
+
     // Prepare chart data
-    const dailyStats = stats.dailyStats || [];
-    const last7Days = dailyStats.slice(-7);
+    const dailyStatsData = stats.dailyStats || [];
+    const last7Days = dailyStatsData.slice(-7);
     const lineData = {
         labels: (last7Days || []).map(d => {
             const parts = (d.date || '').split('-');
             return parts.length > 2 ? parts[2] : '';
-        }), // Day numbers
+        }),
         datasets: [{
             data: (last7Days || []).map(d => Math.floor((d.totalStudyTime || 0) / 60)),
-            color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`, // primary glow
+            color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
             strokeWidth: 3
         }],
     };
@@ -81,9 +117,9 @@ export const StatsScreen = () => {
 
             <View style={styles.header}>
                 <Text style={styles.title}>Analytics</Text>
-                <View style={styles.headerBadge}>
-                    <Text style={styles.headerBadgeText}>Live Metrics</Text>
-                </View>
+                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                    <Text style={styles.shareText}>📤 Share</Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -112,8 +148,70 @@ export const StatsScreen = () => {
                     </Card>
                 </View>
 
-                {/* Weekly Trend Chart */}
+                {/* Recap Section */}
                 <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Momentum Recap</Text>
+                    <View style={styles.periodSelector}>
+                        {(['day', 'week', 'month'] as PeriodType[]).map((p) => (
+                            <TouchableOpacity
+                                key={p}
+                                style={[styles.periodButton, period === p && styles.periodButtonActive]}
+                                onPress={() => setPeriod(p)}
+                            >
+                                <Text style={[styles.periodButtonText, period === p && styles.periodButtonTextActive]}>
+                                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                <Card style={styles.recapCard}>
+                    <View style={styles.recapHeader}>
+                        <View>
+                            <Text style={styles.recapValue}>{Math.floor(recapTotalMinutes)}<Text style={styles.unit}>m</Text></Text>
+                            <Text style={styles.recapLabel}>Focus Duration</Text>
+                        </View>
+                        <View style={styles.recapBadge}>
+                            <Text style={styles.recapBadgeText}>{recapSessions.length} Goals</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.completedList}>
+                        {recapSessions.length > 0 ? (
+                            recapSessions.slice(-3).map((s, idx) => {
+                                const subject = subjects.find(sub => sub.id === s.subjectId);
+                                return (
+                                    <View key={s.id || idx} style={styles.completedItem}>
+                                        <Text style={styles.completedIcon}>{subject?.icon || '📚'}</Text>
+                                        <View style={styles.completedInfo}>
+                                            <Text style={styles.completedText}>{subject?.name || 'Session'}</Text>
+                                            <Text style={styles.completedTime}>{formatTime(s.duration)} focused</Text>
+                                        </View>
+                                        <Text style={styles.completedCheck}>✅</Text>
+                                    </View>
+                                );
+                            })
+                        ) : (
+                            <Text style={styles.emptyRecap}>No goals completed in this {period}.</Text>
+                        )}
+                    </View>
+                </Card>
+
+                {/* Badges Section */}
+                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
+                    <Text style={styles.sectionTitle}>Achievements</Text>
+                </View>
+                <Card style={styles.badgesCard}>
+                    <View style={styles.badgesGrid}>
+                        {achievements.map(badge => (
+                            <BadgeItem key={badge.id} badge={badge} />
+                        ))}
+                    </View>
+                </Card>
+
+                {/* Weekly Trend Chart */}
+                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
                     <Text style={styles.sectionTitle}>Performance Trend</Text>
                     <Text style={styles.sectionSub}>Last 7 Days (min)</Text>
                 </View>
@@ -128,7 +226,7 @@ export const StatsScreen = () => {
                             chartConfig={{
                                 backgroundGradientFrom: colors.backgroundSecondary,
                                 backgroundGradientTo: colors.backgroundSecondary,
-                                color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+                                color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
                                 labelColor: (opacity = 1) => colors.textSecondary,
                                 strokeWidth: 2,
                                 barPercentage: 0.6,
@@ -151,7 +249,7 @@ export const StatsScreen = () => {
                 )}
 
                 {/* Subject Distribution */}
-                <View style={styles.sectionHeader}>
+                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
                     <Text style={styles.sectionTitle}>Focus Allocation</Text>
                 </View>
                 <Card style={styles.chartCardPie}>
@@ -214,20 +312,18 @@ const styles = StyleSheet.create({
         ...typography.h1,
         color: colors.text,
     },
-    headerBadge: {
-        backgroundColor: colors.primary + '15',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+    shareButton: {
+        backgroundColor: colors.primary + '20',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
         borderRadius: borderRadius.full,
         borderWidth: 1,
         borderColor: colors.primary + '30',
     },
-    headerBadgeText: {
+    shareText: {
         ...typography.caption,
         color: colors.primary,
         fontWeight: '700' as any,
-        letterSpacing: 1,
-        textTransform: 'uppercase',
     },
     content: {
         flex: 1,
@@ -272,6 +368,9 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         marginBottom: spacing.md,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     sectionTitle: {
         ...typography.h3,
@@ -283,16 +382,105 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginTop: 2,
     },
-    chartCardShadow: {
-        padding: 0,
-        marginBottom: spacing.xl,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.border,
-        ...shadows.medium,
+    periodSelector: {
+        flexDirection: 'row',
+        backgroundColor: colors.backgroundTertiary,
+        borderRadius: borderRadius.lg,
+        padding: 2,
+    },
+    periodButton: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: borderRadius.md,
+    },
+    periodButtonActive: {
+        backgroundColor: colors.backgroundSecondary,
+    },
+    periodButtonText: {
+        ...typography.tiny,
+        color: colors.textSecondary,
+    },
+    periodButtonTextActive: {
+        color: colors.primary,
+        fontWeight: '700' as any,
+    },
+    recapCard: {
+        backgroundColor: colors.backgroundSecondary,
+        padding: spacing.lg,
+    },
+    recapHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        paddingBottom: spacing.md,
+    },
+    recapValue: {
+        ...typography.h1,
+        color: colors.text,
+        lineHeight: 32,
+    },
+    recapLabel: {
+        ...typography.tiny,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    recapBadge: {
+        backgroundColor: colors.success + '20',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: borderRadius.full,
+    },
+    recapBadgeText: {
+        ...typography.tiny,
+        color: colors.success,
+        fontWeight: '700' as any,
+    },
+    completedList: {
+        gap: spacing.md,
+    },
+    completedItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+    },
+    completedIcon: {
+        fontSize: 24,
+    },
+    completedInfo: {
+        flex: 1,
+    },
+    completedText: {
+        ...typography.body,
+        fontWeight: '600' as any,
+        color: colors.text,
+    },
+    completedTime: {
+        ...typography.tiny,
+        color: colors.textSecondary,
+    },
+    completedCheck: {
+        fontSize: 16,
+    },
+    emptyRecap: {
+        ...typography.body,
+        color: colors.textMuted,
+        textAlign: 'center',
+        paddingVertical: spacing.md,
+    },
+    badgesCard: {
+        backgroundColor: colors.backgroundSecondary,
+        padding: spacing.lg,
+    },
+    badgesGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
     },
     chartCard: {
-        marginTop: spacing.md,
+        marginTop: spacing.sm,
         padding: spacing.md,
         alignItems: 'center',
         backgroundColor: colors.backgroundSecondary,
@@ -303,7 +491,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
     },
     chartCardPie: {
-        marginBottom: spacing.xl,
+        marginBottom: spacing.sm,
         padding: 0,
         alignItems: 'center',
         backgroundColor: colors.backgroundSecondary,
