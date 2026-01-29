@@ -48,7 +48,10 @@ export const generateReportHTML = (
     const todos = allTodos.filter(t => isWithinPeriod(t.date, period));
 
     // Calculate Completion for Stats
-    const goalsCompleted = tasks.filter(t => t.isCompleted).length;
+    // User "Goals" = StudyTodos (from "Add Goal" button)
+    // User "Tasks" = StudyTasks (from "Add Task" button)
+    const goalsCompleted = todos.filter(t => t.isCompleted).length;
+    const tasksCompleted = tasks.filter(t => t.isCompleted).length;
 
     // Prepare SVG Donut Data
     const validSubjects = subjects.filter(s => s.totalStudyTime > 0);
@@ -261,8 +264,8 @@ export const generateReportHTML = (
                 <span class="stat-label">Goals Completed</span>
             </div>
             <div class="stat-box">
-                <span class="stat-val" style="color: #D946EF;">${stats.currentStreak}</span>
-                <span class="stat-label">Day Streak</span>
+                <span class="stat-val" style="color: #D946EF;">${tasksCompleted}</span>
+                <span class="stat-label">Sessions Done</span>
             </div>
         </div>
 
@@ -304,6 +307,16 @@ export const generateReportHTML = (
         <div class="checklist-grid">
             <div class="checklist-box">
                 <div class="box-title">Goals Checklist</div>
+                ${todos.length > 0 ? todos.map(t => `
+                    <div class="check-item ${t.isCompleted ? 'done' : ''}">
+                        <span class="check-icon">${t.isCompleted ? '☑' : '☐'}</span>
+                        <span>${t.text}</span>
+                    </div>
+                `).join('') : '<div style="font-size: 12px; color: #475569; font-style: italic;">No goals set for this period.</div>'}
+            </div>
+
+            <div class="checklist-box">
+                <div class="box-title">Study Tasks</div>
                 ${tasks.length > 0 ? tasks.map(t => {
         const subject = subjects.find(sub => sub.id === t.subjectId);
         return `
@@ -312,17 +325,7 @@ export const generateReportHTML = (
                         <span style="font-weight: 600; color: ${subject?.color || '#94A3B8'}">[${subject?.name || 'GEN'}]</span>
                         <span>${t.topic}</span>
                     </div>`;
-    }).join('') : '<div style="font-size: 12px; color: #475569; font-style: italic;">No goals set for this period.</div>'}
-            </div>
-
-            <div class="checklist-box">
-                <div class="box-title">Tasks Checklist</div>
-                ${todos.length > 0 ? todos.map(t => `
-                    <div class="check-item ${t.isCompleted ? 'done' : ''}">
-                        <span class="check-icon">${t.isCompleted ? '☑' : '☐'}</span>
-                        <span>${t.text}</span>
-                    </div>
-                `).join('') : '<div style="font-size: 12px; color: #475569; font-style: italic;">No tasks recorded.</div>'}
+    }).join('') : '<div style="font-size: 12px; color: #475569; font-style: italic;">No focus sessions.</div>'}
             </div>
         </div>
 
