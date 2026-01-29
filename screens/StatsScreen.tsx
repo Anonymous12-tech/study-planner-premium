@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
 import { Card } from '../components/ui/Card';
-import { getSessions, getDailyStats, getSubjects } from '../utils/storage';
+import { getSessions, getDailyStats, getSubjects, getTasks, getTodos } from '../utils/storage';
 import {
     calculateStatistics,
     formatTime,
@@ -13,7 +13,7 @@ import {
     getAchievements,
     AchievementBadge
 } from '../utils/calculations';
-import { Statistics, Subject, StudySession } from '../types';
+import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../types';
 import { BadgeItem } from '../components/BadgeItem';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
@@ -27,20 +27,26 @@ export const StatsScreen = () => {
     const [stats, setStats] = useState<Statistics | null>(null);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [sessions, setSessions] = useState<StudySession[]>([]);
+    const [tasks, setTasks] = useState<StudyTask[]>([]);
+    const [todos, setTodos] = useState<StudyTodo[]>([]);
     const [period, setPeriod] = useState<PeriodType>('week');
     const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
 
     const loadData = async () => {
-        const [sessionsData, dailyStats, subjectsData] = await Promise.all([
+        const [sessionsData, dailyStats, subjectsData, tasksData, todosData] = await Promise.all([
             getSessions(),
             getDailyStats(),
             getSubjects(),
+            getTasks(),
+            getTodos(),
         ]);
 
         const statistics = calculateStatistics(sessionsData, dailyStats);
         setStats(statistics);
         setSubjects(subjectsData);
         setSessions(sessionsData);
+        setTasks(tasksData);
+        setTodos(todosData);
         setAchievements(getAchievements(sessionsData, dailyStats));
     };
 
@@ -61,7 +67,7 @@ export const StatsScreen = () => {
         if (!stats) return;
 
         try {
-            const html = generateReportHTML(period, stats, subjects, periodSessions, achievements);
+            const html = generateReportHTML(period, stats, subjects, periodSessions, achievements, tasks, todos);
             const { uri } = await Print.printToFileAsync({ html });
 
             await Sharing.shareAsync(uri, {

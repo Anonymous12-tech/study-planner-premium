@@ -1,15 +1,52 @@
-import { Statistics, Subject, StudySession } from '../types';
+import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../types';
 import { AchievementBadge } from './calculations';
+
+const isWithinPeriod = (dateStr: string, period: string): boolean => {
+    const date = new Date(dateStr);
+    const now = new Date();
+
+    // Normalize to midnight to avoid time issues
+    date.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (period === 'day') {
+        return date.getTime() === today.getTime();
+    }
+
+    if (period === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        return date >= weekAgo && date <= today;
+    }
+
+    if (period === 'month') {
+        const monthAgo = new Date(today);
+        monthAgo.setDate(today.getDate() - 30);
+        return date >= monthAgo && date <= today;
+    }
+
+    return false;
+};
 
 export const generateReportHTML = (
     period: string,
     stats: Statistics,
     subjects: Subject[],
     sessions: StudySession[],
-    achievements: AchievementBadge[]
+    achievements: AchievementBadge[],
+    allTasks: StudyTask[],
+    allTodos: StudyTodo[]
 ): string => {
     const totalMinutes = sessions.reduce((acc, s) => acc + s.duration, 0) / 60;
     const unlockedBadges = achievements.filter(a => a.unlocked);
+
+    // Filter Items by Period
+    const tasks = allTasks.filter(t => isWithinPeriod(t.date, period));
+    const todos = allTodos.filter(t => isWithinPeriod(t.date, period));
+
+    // Calculate Completion for Stats
+    const goalsCompleted = tasks.filter(t => t.isCompleted).length;
 
     // Prepare SVG Donut Data
     const validSubjects = subjects.filter(s => s.totalStudyTime > 0);
@@ -48,7 +85,6 @@ export const generateReportHTML = (
             z-index: 1;
         }
 
-        /* Cyberpunk Glows */
         .glow-1 {
             position: fixed;
             top: -100px;
@@ -72,7 +108,7 @@ export const generateReportHTML = (
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 60px;
+            margin-bottom: 50px;
             border-left: 4px solid #06B6D4;
             padding-left: 20px;
         }
@@ -85,17 +121,13 @@ export const generateReportHTML = (
             text-transform: uppercase;
         }
 
-        .accent-text {
-            color: #06B6D4; /* Cyan */
-            font-weight: 800;
-            letter-spacing: 2px;
-        }
+        .accent-text { color: #06B6D4; font-weight: 800; letter-spacing: 2px; }
 
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-bottom: 50px;
+            margin-bottom: 40px;
         }
 
         .stat-box {
@@ -116,26 +148,18 @@ export const generateReportHTML = (
         }
 
         .stat-val {
-            font-size: 48px;
-            font-weight: 900;
-            color: #F8FAFC;
-            display: block;
-            margin-bottom: 5px;
+            font-size: 48px; font-weight: 900; color: #F8FAFC; display: block; margin-bottom: 5px;
         }
 
         .stat-label {
-            font-size: 11px;
-            font-weight: 700;
-            color: #94A3B8;
-            text-transform: uppercase;
-            letter-spacing: 2.5px;
+            font-size: 11px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 2.5px;
         }
 
         .visuals {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
             gap: 30px;
-            margin-bottom: 50px;
+            margin-bottom: 40px;
         }
 
         .chart-box {
@@ -152,22 +176,13 @@ export const generateReportHTML = (
         .donut-wrap { position: relative; width: 160px; height: 160px; }
         .donut-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
         .donut-inner {
-            position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             font-size: 24px; font-weight: 800; color: #06B6D4;
         }
 
         .legend { flex: 1; }
-        .leg-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .leg-cap {
-            width: 8px; height: 8px; border-radius: 2px; margin-right: 12px;
-        }
+        .leg-item { display: flex; align-items: center; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
+        .leg-cap { width: 8px; height: 8px; border-radius: 2px; margin-right: 12px; }
 
         .badges-box {
             background: rgba(11, 14, 35, 0.8);
@@ -177,57 +192,43 @@ export const generateReportHTML = (
         }
 
         .badge-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;
         }
 
         .b-mini {
-            background: #161B33;
-            border: 1px solid #2D3748;
-            border-radius: 16px;
-            padding: 15px;
-            text-align: center;
+            background: #161B33; border: 1px solid #2D3748; border-radius: 16px; padding: 15px; text-align: center;
         }
-
         .b-icon { font-size: 24px; margin-bottom: 5px; }
         .b-name { font-size: 10px; font-weight: 800; color: #CBD5E1; text-transform: uppercase; }
 
-        .log-section {
-            background: #0B0E23;
-            border-radius: 24px;
-            padding: 30px;
-            border: 1px solid #1E293B;
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .log-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 0;
-            border-bottom: 1px solid #1E293B;
-        }
-        .log-row:last-child { border-bottom: 0; }
-        .log-subj { font-weight: 800; color: #F1F5F9; font-size: 16px; }
-        .log-dur { color: #06B6D4; font-weight: 900; }
-
-        .footer-banner {
-            margin-top: 60px;
-            padding: 40px;
-            background: linear-gradient(135deg, #0B0E23 0%, #030014 100%);
-            border: 1px solid #06B6D4;
-            border-radius: 30px;
-            text-align: center;
-        }
-
-        .quote {
-            font-size: 20px;
-            font-weight: 700;
-            color: #FFFFFF;
-            margin-bottom: 10px;
-            letter-spacing: -0.5px;
+        .checklist-box {
+            background: #0B0E23; border: 1px solid #1E293B; border-radius: 24px; padding: 25px;
         }
         
+        .box-title {
+            font-size: 11px; font-weight: 800; color: #94A3B8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;
+            border-bottom: 1px solid #1E293B; padding-bottom: 10px;
+        }
+
+        .check-item {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; color: #E2E8F0;
+        }
+        .check-item.done { text-decoration: line-through; color: #475569; }
+        .check-icon { font-size: 14px; }
+        
+        .footer-banner {
+            margin-top: 50px; padding: 30px; background: linear-gradient(135deg, #0B0E23 0%, #030014 100%);
+            border: 1px solid #06B6D4; border-radius: 30px; text-align: center;
+        }
+        .quote { font-size: 18px; font-weight: 700; color: #FFFFFF; margin-bottom: 10px; letter-spacing: -0.5px; }
+
     </style>
 </head>
 <body>
@@ -254,8 +255,8 @@ export const generateReportHTML = (
                 <span class="stat-label">Min Focus</span>
             </div>
             <div class="stat-box">
-                <span class="stat-val">${sessions.length}</span>
-                <span class="stat-label">Tasks Done</span>
+                <span class="stat-val" style="color: #A855F7;">${goalsCompleted}</span>
+                <span class="stat-label">Goals Completed</span>
             </div>
             <div class="stat-box">
                 <span class="stat-val" style="color: #D946EF;">${stats.currentStreak}</span>
@@ -298,17 +299,29 @@ export const generateReportHTML = (
             </div>
         </div>
 
-        <div style="font-size: 12px; font-weight: 800; color: #94A3B8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Recent Study Sessions</div>
-        <div class="log-section">
-            ${sessions.slice(-4).reverse().map(s => {
-        const subject = subjects.find(sub => sub.id === s.subjectId);
+        <div class="checklist-grid">
+            <div class="checklist-box">
+                <div class="box-title">Goals Checklist</div>
+                ${tasks.length > 0 ? tasks.map(t => {
+        const subject = subjects.find(sub => sub.id === t.subjectId);
         return `
-                    <div class="log-row">
-                        <div class="log-subj">${subject?.icon || '🧠'} ${subject?.name || 'Study Session'}</div>
-                        <div class="log-dur">+${Math.floor(s.duration / 60)}m</div>
+                    <div class="check-item ${t.isCompleted ? 'done' : ''}">
+                        <span class="check-icon">${t.isCompleted ? '☑' : '☐'}</span>
+                        <span style="font-weight: 600; color: ${subject?.color || '#94A3B8'}">[${subject?.name || 'GEN'}]</span>
+                        <span>${t.topic}</span>
+                    </div>`;
+    }).join('') : '<div style="font-size: 12px; color: #475569; font-style: italic;">No goals set for this period.</div>'}
+            </div>
+
+            <div class="checklist-box">
+                <div class="box-title">Tasks Checklist</div>
+                ${todos.length > 0 ? todos.map(t => `
+                    <div class="check-item ${t.isCompleted ? 'done' : ''}">
+                        <span class="check-icon">${t.isCompleted ? '☑' : '☐'}</span>
+                        <span>${t.text}</span>
                     </div>
-                `;
-    }).join('')}
+                `).join('') : '<div style="font-size: 12px; color: #475569; font-style: italic;">No tasks recorded.</div>'}
+            </div>
         </div>
 
         <div class="footer-banner">
@@ -319,3 +332,4 @@ export const generateReportHTML = (
 </body>
 </html>
     `;
+};
