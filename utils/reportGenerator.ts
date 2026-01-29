@@ -2,11 +2,10 @@ import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../type
 import { AchievementBadge } from './calculations';
 
 const isWithinPeriod = (dateStr: string, period: string): boolean => {
-    const date = new Date(dateStr);
-    const now = new Date();
+    // Parse YYYY-MM-DD manually to create local date at 00:00:00
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
 
-    // Normalize to midnight to avoid time issues
-    date.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -17,13 +16,16 @@ const isWithinPeriod = (dateStr: string, period: string): boolean => {
     if (period === 'week') {
         const weekAgo = new Date(today);
         weekAgo.setDate(today.getDate() - 7);
-        return date >= weekAgo && date <= today;
+        // Include future dates if they exist (e.g. planner items)
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+        return date >= weekAgo && date <= nextWeek;
     }
 
     if (period === 'month') {
-        const monthAgo = new Date(today);
-        monthAgo.setDate(today.getDate() - 30);
-        return date >= monthAgo && date <= today;
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return date >= monthStart && date <= monthEnd;
     }
 
     return false;
