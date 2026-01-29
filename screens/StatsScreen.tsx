@@ -16,6 +16,8 @@ import {
 import { Statistics, Subject, StudySession } from '../types';
 import { BadgeItem } from '../components/BadgeItem';
 import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
+import { generateReportHTML } from '../utils/reportGenerator';
 
 const { width } = Dimensions.get('window');
 
@@ -49,19 +51,27 @@ export const StatsScreen = () => {
     );
 
     const handleShare = async () => {
-        const periodText = period === 'day' ? 'Today' : period === 'week' ? 'this Week' : 'this Month';
         const periodSessions = filterSessionsByPeriod(sessions, period);
-        const totalMinutes = periodSessions.reduce((acc, s) => acc + s.duration, 0) / 60;
 
-        const message = `🚀 Study Recap: I spent ${Math.floor(totalMinutes)} minutes focusing ${periodText}! \n\nCheck out my progress on StudyPlanner. #DeepFocus #StudyMotivation`;
+        if (periodSessions.length === 0) {
+            Alert.alert('No Data', `You haven't completed any goals this ${period} to share!`);
+            return;
+        }
+
+        if (!stats) return;
 
         try {
-            const result = await Share.share({
-                message,
-                title: 'My Study Recap',
+            const html = generateReportHTML(period, stats, subjects, periodSessions, achievements);
+            const { uri } = await Print.printToFileAsync({ html });
+
+            await Sharing.shareAsync(uri, {
+                mimeType: 'application/pdf',
+                dialogTitle: `My Study Recap - ${period.toUpperCase()}`,
+                UTI: 'com.adobe.pdf',
             });
         } catch (error: any) {
-            Alert.alert('Sharing Failed', error.message);
+            Alert.alert('Report Failed', 'Could not generate your visual recap. Please try again.');
+            console.error(error);
         }
     };
 
