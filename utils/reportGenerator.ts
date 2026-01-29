@@ -237,14 +237,14 @@ export const generateReportHTML = (
 
         <div class="header">
             <div>
-                <div class="brand-name">Focus<span class="accent-text">Vault</span></div>
+                <div class="brand-name">Focus<span class="accent-text">Flow</span></div>
                 <div style="font-size: 12px; font-weight: 700; color: #94A3B8; letter-spacing: 3px; margin-top: 5px; text-transform: uppercase;">
-                    System Intelligence // ${period}
+                    Performance Report // ${period}
                 </div>
             </div>
             <div style="text-align: right">
                 <div style="font-size: 14px; font-weight: 900; color: #FFFFFF;">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                <div style="font-size: 10px; font-weight: 800; color: #06B6D4; margin-top: 4px; letter-spacing: 1px;">ENCRYPTED_LOGS: ${new Date().getTime().toString().slice(-6)}</div>
+                <div style="font-size: 10px; font-weight: 800; color: #06B6D4; margin-top: 4px; letter-spacing: 1px;">REPORT ID: ${new Date().getTime().toString().slice(-6)}</div>
             </div>
         </div>
 
@@ -285,7 +285,7 @@ export const generateReportHTML = (
             </div>
 
             <div class="badges-box">
-                <div style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px;">Combat Achievements</div>
+                <div style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px;">Achievements Unlocked</div>
                 <div class="badge-grid">
                     ${unlockedBadges.slice(0, 4).map(b => `
                         <div class="b-mini">
@@ -293,18 +293,18 @@ export const generateReportHTML = (
                             <div class="b-name">${b.title}</div>
                         </div>
                     `).join('')}
-                    ${unlockedBadges.length === 0 ? '<div style="grid-column: span 2; padding: 20px; color: #475569; text-align: center; font-size: 12px;">NO DATA COLLECTED</div>' : ''}
+                    ${unlockedBadges.length === 0 ? '<div style="grid-column: span 2; padding: 20px; color: #475569; text-align: center; font-size: 12px;">No Achievements Yet</div>' : ''}
                 </div>
             </div>
         </div>
 
-        <div style="font-size: 12px; font-weight: 800; color: #94A3B8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Recent Neural Sessions</div>
+        <div style="font-size: 12px; font-weight: 800; color: #94A3B8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Recent Study Sessions</div>
         <div class="log-section">
             ${sessions.slice(-4).reverse().map(s => {
         const subject = subjects.find(sub => sub.id === s.subjectId);
         return `
                     <div class="log-row">
-                        <div class="log-subj">${subject?.icon || '🧠'} ${subject?.name || 'Academic Uplink'}</div>
+                        <div class="log-subj">${subject?.icon || '🧠'} ${subject?.name || 'Study Session'}</div>
                         <div class="log-dur">+${Math.floor(s.duration / 60)}m</div>
                     </div>
                 `;
@@ -313,10 +313,9 @@ export const generateReportHTML = (
 
         <div class="footer-banner">
             <div class="quote">STAY HUNGRY. STAY FOCUSED.</div>
-            <div style="color: #64748B; font-weight: 700; font-size: 12px; letter-spacing: 1px;">GEN_V2 // STUDYFLOW_CORE</div>
+            <div style="color: #64748B; font-weight: 700; font-size: 12px; letter-spacing: 1px;">FOCUSFLOW PREMIUM REPORT</div>
         </div>
     </div>
 </body>
 </html>
     `;
-};
