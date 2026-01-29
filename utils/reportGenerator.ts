@@ -21,7 +21,7 @@ export const generateReportHTML = (
         const dashArray = `${percentage} ${100 - percentage}`;
         const dashOffset = -currentOffset;
         currentOffset += percentage;
-        return `<circle cx="21" cy="21" r="15.915" fill="transparent" stroke="${s.color}" stroke-width="3" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}"></circle>`;
+        return `<circle cx="21" cy="21" r="15.915" fill="transparent" stroke="${s.color}" stroke-width="4" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}"></circle>`;
     }).join('');
 
     return `
@@ -30,269 +30,291 @@ export const generateReportHTML = (
 <head>
     <meta charset="UTF-8">
     <style>
-        @page { margin: 0; }
+        @page { size: A4; margin: 0; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #020617; /* Deepest Indigo-Black */
-            color: #F8FAFC;
+            background-color: #030014 !important; /* Total Void Black */
+            color: #E2E8F0;
             margin: 0;
-            padding: 60px;
-            min-height: 100vh;
+            padding: 50px;
+            min-height: 297mm;
+            box-sizing: border-box;
         }
-        .bg-glow {
+
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Cyberpunk Glows */
+        .glow-1 {
             position: fixed;
             top: -100px;
-            right: -100px;
+            left: -100px;
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
             z-index: -1;
         }
+        .glow-2 {
+            position: fixed;
+            bottom: -100px;
+            right: -100px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(217, 70, 239, 0.1) 0%, transparent 70%);
+            z-index: -1;
+        }
+
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
+            margin-bottom: 60px;
+            border-left: 4px solid #06B6D4;
+            padding-left: 20px;
+        }
+
+        .brand-name {
+            font-size: 38px;
+            font-weight: 900;
+            color: #FFFFFF;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+        }
+
+        .accent-text {
+            color: #06B6D4; /* Cyan */
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
             margin-bottom: 50px;
         }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+
+        .stat-box {
+            background: #0B0E23;
+            border: 1px solid #1E293B;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .logo-box {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #6366F1, #A855F7);
-            border-radius: 12px;
+
+        .stat-box::after {
+            content: "";
+            position: absolute;
+            bottom: 0; left: 10%; right: 10%; height: 2px;
+            background: linear-gradient(to right, transparent, #06B6D4, transparent);
+        }
+
+        .stat-val {
+            font-size: 48px;
+            font-weight: 900;
+            color: #F8FAFC;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94A3B8;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+        }
+
+        .visuals {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .chart-box {
+            background: #0B0E23;
+            border-radius: 30px;
+            padding: 40px;
+            border: 1px solid #1E293B;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+            gap: 30px;
         }
-        .app-title {
-            font-size: 32px;
-            font-weight: 900;
-            background: linear-gradient(to right, #F8FAFC, #94A3B8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -1.5px;
-        }
-        .period-label {
-            font-size: 14px;
-            font-weight: 800;
-            color: #6366F1;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            margin-top: 5px;
-        }
-        .main-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-            margin-bottom: 50px;
-        }
-        .stat-card {
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
-            padding: 30px;
-            position: relative;
-            overflow: hidden;
-        }
-        .stat-card::after {
-            content: "";
+
+        .donut-wrap { position: relative; width: 160px; height: 160px; }
+        .donut-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+        .donut-inner {
             position: absolute;
-            top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(to right, transparent, rgba(99, 102, 241, 0.3), transparent);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 24px; font-weight: 800; color: #06B6D4;
         }
-        .stat-value {
-            font-size: 42px;
-            font-weight: 800;
-            color: #F8FAFC;
-            margin-bottom: 5px;
-            text-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
-        }
-        .stat-label {
-            font-size: 12px;
-            font-weight: 700;
-            color: #64748B;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .visual-section {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
-            gap: 40px;
-            margin-bottom: 50px;
-        }
-        .chart-container {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 32px;
-            padding: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .donut-svg {
-            width: 180px;
-            height: 180px;
-            transform: rotate(-90deg);
-        }
-        .legend {
-            flex: 1;
-            margin-left: 40px;
-        }
-        .legend-item {
+
+        .legend { flex: 1; }
+        .leg-item {
             display: flex;
             align-items: center;
             margin-bottom: 12px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
         }
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 12px;
+        .leg-cap {
+            width: 8px; height: 8px; border-radius: 2px; margin-right: 12px;
         }
+
+        .badges-box {
+            background: rgba(11, 14, 35, 0.8);
+            border-radius: 30px;
+            padding: 30px;
+            border: 1px dashed #334155;
+        }
+
         .badge-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
+            margin-top: 20px;
         }
-        .badge-mini {
-            background: #1E293B;
+
+        .b-mini {
+            background: #161B33;
+            border: 1px solid #2D3748;
             border-radius: 16px;
             padding: 15px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.03);
         }
-        .badge-mini-icon { font-size: 24px; margin-bottom: 8px; }
-        .badge-mini-title { font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; }
 
-        .session-log {
-            margin-top: 40px;
-            background: rgba(30, 41, 59, 0.3);
+        .b-icon { font-size: 24px; margin-bottom: 5px; }
+        .b-name { font-size: 10px; font-weight: 800; color: #CBD5E1; text-transform: uppercase; }
+
+        .log-section {
+            background: #0B0E23;
             border-radius: 24px;
             padding: 30px;
+            border: 1px solid #1E293B;
         }
-        .log-item {
+
+        .log-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             padding: 15px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid #1E293B;
         }
-        .log-item:last-child { border-bottom: 0; }
-        .log-subject { font-weight: 700; font-size: 16px; }
-        .log-duration { color: #6366F1; font-weight: 800; }
+        .log-row:last-child { border-bottom: 0; }
+        .log-subj { font-weight: 800; color: #F1F5F9; font-size: 16px; }
+        .log-dur { color: #06B6D4; font-weight: 900; }
 
-        .quote-banner {
+        .footer-banner {
             margin-top: 60px;
             padding: 40px;
-            background: linear-gradient(135deg, #1E1B4B 0%, #020617 100%);
-            border-radius: 32px;
+            background: linear-gradient(135deg, #0B0E23 0%, #030014 100%);
+            border: 1px solid #06B6D4;
+            border-radius: 30px;
             text-align: center;
-            border: 1px solid #312E81;
         }
-        .quote-text {
-            font-size: 18px;
-            font-style: italic;
-            color: #C7D2FE;
+
+        .quote {
+            font-size: 20px;
+            font-weight: 700;
+            color: #FFFFFF;
             margin-bottom: 10px;
+            letter-spacing: -0.5px;
         }
+        
     </style>
 </head>
 <body>
-    <div class="bg-glow"></div>
-    
-    <div class="header">
-        <div>
-            <div class="brand">
-                <div class="logo-box">⚡</div>
-                <div>
-                    <div class="app-title">FocusFlow</div>
-                    <div class="period-label">${period} Intelligence Report</div>
+    <div class="container">
+        <div class="glow-1"></div>
+        <div class="glow-2"></div>
+
+        <div class="header">
+            <div>
+                <div class="brand-name">Focus<span class="accent-text">Vault</span></div>
+                <div style="font-size: 12px; font-weight: 700; color: #94A3B8; letter-spacing: 3px; margin-top: 5px; text-transform: uppercase;">
+                    System Intelligence // ${period}
+                </div>
+            </div>
+            <div style="text-align: right">
+                <div style="font-size: 14px; font-weight: 900; color: #FFFFFF;">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                <div style="font-size: 10px; font-weight: 800; color: #06B6D4; margin-top: 4px; letter-spacing: 1px;">ENCRYPTED_LOGS: ${new Date().getTime().toString().slice(-6)}</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <span class="stat-val">${Math.floor(totalMinutes)}</span>
+                <span class="stat-label">Min Focus</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-val">${sessions.length}</span>
+                <span class="stat-label">Tasks Done</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-val" style="color: #D946EF;">${stats.currentStreak}</span>
+                <span class="stat-label">Day Streak</span>
+            </div>
+        </div>
+
+        <div class="visuals">
+            <div class="chart-box">
+                <div class="donut-wrap">
+                    <svg class="donut-svg" viewBox="0 0 42 42">
+                        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#121826" stroke-width="4"></circle>
+                        ${donutSegments}
+                    </svg>
+                    <div class="donut-inner">⚡</div>
+                </div>
+                <div class="legend">
+                    <div style="font-size: 10px; font-weight: 800; color: #94A3B8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Resource Allocation</div>
+                    ${validSubjects.slice(0, 4).map(s => `
+                        <div class="leg-item">
+                            <div class="leg-cap" style="background-color: ${s.color};"></div>
+                            <div style="flex: 1">${s.name}</div>
+                            <div style="color: #64748B">${Math.floor(s.totalStudyTime / 60)}m</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="badges-box">
+                <div style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px;">Combat Achievements</div>
+                <div class="badge-grid">
+                    ${unlockedBadges.slice(0, 4).map(b => `
+                        <div class="b-mini">
+                            <div class="b-icon">${b.icon}</div>
+                            <div class="b-name">${b.title}</div>
+                        </div>
+                    `).join('')}
+                    ${unlockedBadges.length === 0 ? '<div style="grid-column: span 2; padding: 20px; color: #475569; text-align: center; font-size: 12px;">NO DATA COLLECTED</div>' : ''}
                 </div>
             </div>
         </div>
-        <div style="text-align: right">
-            <div style="font-size: 12px; color: #64748B; font-weight: 700; letter-spacing: 1px;">ISSUE NO. ${new Date().getTime().toString().slice(-6)}</div>
-            <div style="font-size: 14px; font-weight: 800; color: #F8FAFC; margin-top: 5px;">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-        </div>
-    </div>
 
-    <div class="main-stats">
-        <div class="stat-card">
-            <div class="stat-value">${Math.floor(totalMinutes)}<span style="font-size: 18px; color: #6366F1">Min</span></div>
-            <div class="stat-label">Total Immersion</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">${sessions.length}<span style="font-size: 18px; color: #A855F7">Hit</span></div>
-            <div class="stat-label">Goals Accomplished</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">${stats.currentStreak}<span style="font-size: 18px; color: #F43F5E">Day</span></div>
-            <div class="stat-label">Persistence Streak</div>
-        </div>
-    </div>
-
-    <div class="visual-section">
-        <div class="chart-container">
-            <div>
-                <svg class="donut-svg" viewBox="0 0 42 42">
-                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#1E293B" stroke-width="3"></circle>
-                    ${donutSegments}
-                </svg>
-            </div>
-            <div class="legend">
-                <div style="font-size: 12px; font-weight: 800; color: #64748B; margin-bottom: 20px; text-transform: uppercase;">Focus Allocation</div>
-                ${validSubjects.slice(0, 5).map(s => `
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background-color: ${s.color}; box-shadow: 0 0 10px ${s.color}66;"></div>
-                        <div style="flex: 1">${s.name}</div>
-                        <div style="color: #94A3B8">${Math.floor(s.totalStudyTime / 60)}m</div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-        
-        <div>
-            <div style="font-size: 12px; font-weight: 800; color: #64748B; margin-bottom: 20px; text-transform: uppercase;">Aura Badges</div>
-            <div class="badge-grid">
-                ${unlockedBadges.slice(0, 4).map(b => `
-                    <div class="badge-mini">
-                        <div class="badge-mini-icon">${b.icon}</div>
-                        <div class="badge-mini-title">${b.title}</div>
-                    </div>
-                `).join('')}
-                ${unlockedBadges.length === 0 ? '<div class="badge-mini" style="grid-column: span 2; color: #475569;">No Trophies Yet</div>' : ''}
-            </div>
-        </div>
-    </div>
-
-    <div class="section-title">Peak Performance Log</div>
-    <div class="session-log">
-        ${sessions.slice(-4).reverse().map(s => {
+        <div style="font-size: 12px; font-weight: 800; color: #94A3B8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Recent Neural Sessions</div>
+        <div class="log-section">
+            ${sessions.slice(-4).reverse().map(s => {
         const subject = subjects.find(sub => sub.id === s.subjectId);
         return `
-                <div class="log-item">
-                    <div class="log-subject">${subject?.icon || '📚'} ${subject?.name || 'Academic Session'}</div>
-                    <div class="log-duration">+${Math.floor(s.duration / 60)}m</div>
-                </div>
-            `;
+                    <div class="log-row">
+                        <div class="log-subj">${subject?.icon || '🧠'} ${subject?.name || 'Academic Uplink'}</div>
+                        <div class="log-dur">+${Math.floor(s.duration / 60)}m</div>
+                    </div>
+                `;
     }).join('')}
-    </div>
+        </div>
 
-    <div class="quote-banner">
-        <div class="quote-text">"The only way to do great work is to love what you do. Stay consistent, stay focused."</div>
-        <div style="color: #6366F1; font-weight: 800; font-size: 14px;">TEAM FOCUSFLOW</div>
-    </div>
-
-    <div style="text-align: center; margin-top: 40px; font-size: 11px; color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
-        End of Intelligence Report | Confidential to Student
+        <div class="footer-banner">
+            <div class="quote">STAY HUNGRY. STAY FOCUSED.</div>
+            <div style="color: #64748B; font-weight: 700; font-size: 12px; letter-spacing: 1px;">GEN_V2 // STUDYFLOW_CORE</div>
+        </div>
     </div>
 </body>
 </html>
