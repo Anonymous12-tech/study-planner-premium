@@ -234,6 +234,36 @@ export const generateReportHTML = (
         }
         .quote { font-size: 18px; font-weight: 700; color: #FFFFFF; margin-bottom: 10px; letter-spacing: -0.5px; }
 
+        .page-2 {
+            page-break-before: always;
+            height: 297mm;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .mega-quote {
+            font-size: 64px;
+            font-weight: 900;
+            line-height: 1.1;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            max-width: 80%;
+            text-transform: uppercase;
+        }
+
+        .brand-bottom {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
@@ -332,6 +362,21 @@ export const generateReportHTML = (
         <div class="footer-banner">
             <div class="quote">STAY HUNGRY. STAY FOCUSED.</div>
             <div style="color: #64748B; font-weight: 700; font-size: 12px; letter-spacing: 1px;">FOCUSFLOW PREMIUM REPORT</div>
+        </div>
+    </div>
+
+    <!-- Page 2: Motivation -->
+    <div class="page-2">
+        <div class="glow-1"></div>
+        <div class="glow-2"></div>
+        
+        <div class="mega-quote">
+            "THE ONLY BAD WORKOUT IS THE ONE THAT DIDN'T HAPPEN."
+        </div>
+
+        <div class="brand-bottom">
+            <div class="brand-name" style="font-size: 48px;">Focus<span class="accent-text">Flow</span></div>
+            <div style="color: #64748B; font-weight: 700; font-size: 14px; letter-spacing: 4px; margin-top: 10px;">OWNE YOUR FUTURE</div>
         </div>
     </div>
 </body>
