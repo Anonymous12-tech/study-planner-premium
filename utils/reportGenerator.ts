@@ -91,11 +91,11 @@ export const generateReportHTML = (
         /* Page Containers */
         .page {
             width: 100%;
-            height: 297mm; /* Exact A4 Height */
+            height: 296mm; /* Slightly less than 297mm to prevent overflow */
             position: relative;
-            padding: 40px; /* Reduced padding slightly to ensure fit */
+            padding: 40px;
             background-color: #030014;
-            overflow: hidden; /* Prevent spillover creating extra pages */
+            overflow: hidden; 
             page-break-after: always;
         }
 
@@ -286,7 +286,7 @@ export const generateReportHTML = (
 
     </style>
 </head>
-<body>
+<body style="margin: 0; padding: 0; overflow-y: hidden;">
     <!-- PAGE 1: DATA & STATS -->
     <div class="page">
         <div class="glow-1"></div>

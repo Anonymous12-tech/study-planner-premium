@@ -68,7 +68,10 @@ export const StatsScreen = () => {
 
         try {
             const html = generateReportHTML(period, stats, subjects, periodSessions, achievements, tasks, todos);
-            const { uri } = await Print.printToFileAsync({ html });
+            const { uri } = await Print.printToFileAsync({
+                html,
+                margins: { left: 0, top: 0, right: 0, bottom: 0 }
+            });
 
             await Sharing.shareAsync(uri, {
                 mimeType: 'application/pdf',
