@@ -26,9 +26,8 @@ import {
 } from '../utils/storage';
 import { getTodayDateString } from '../utils/calculations';
 import * as Haptics from 'expo-haptics';
-import { BlurView } from 'expo-blur'; // Assuming expo-blur is available, if not we'll use a fallback or remove it.
-// Ideally usage of expo-blur for glassmorphism. If strict text emojis are preferred we stick to them, but vector icons are better.
 import { Ionicons } from '@expo/vector-icons';
+
 
 const { width, height } = Dimensions.get('window');
 
