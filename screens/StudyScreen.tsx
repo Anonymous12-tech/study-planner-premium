@@ -9,6 +9,8 @@ import {
     Alert,
     Platform,
     AppState,
+    ScrollView,
+    Dimensions
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +26,11 @@ import {
 } from '../utils/storage';
 import { getTodayDateString } from '../utils/calculations';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur'; // Assuming expo-blur is available, if not we'll use a fallback or remove it.
+// Ideally usage of expo-blur for glassmorphism. If strict text emojis are preferred we stick to them, but vector icons are better.
+import { Ionicons } from '@expo/vector-icons';
+
+const { width, height } = Dimensions.get('window');
 
 export const StudyScreen = ({ route, navigation }: any) => {
     const { taskId, subjectId } = route.params || {};
@@ -37,7 +44,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
 
     // Animation values
     const pulseAnim = useRef(new Animated.Value(1)).current;
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const fadeAnim = useRef(new Animated.Value(0)).current; // For smooth entry
 
     const loadData = async () => {
         const [subjectsData, active, allTasks] = await Promise.all([
@@ -62,6 +69,12 @@ export const StudyScreen = ({ route, navigation }: any) => {
             const currentTask = allTasks.find(t => t.id === taskId);
             setTask(currentTask || null);
         }
+
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+        }).start();
     };
 
     useEffect(() => {
@@ -89,7 +102,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
                 setSeconds(currentSeconds > 0 ? currentSeconds : 0);
             };
 
-            sync(); // Initial sync
+            sync();
             interval = setInterval(sync, 1000);
         }
 
@@ -105,26 +118,21 @@ export const StudyScreen = ({ route, navigation }: any) => {
     );
 
     const startPulse = () => {
+        // Subtle breathing for the background glow
         Animated.loop(
             Animated.sequence([
                 Animated.timing(pulseAnim, {
-                    toValue: 1.1,
-                    duration: 2000,
+                    toValue: 1.2,
+                    duration: 3000,
                     useNativeDriver: true,
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 1,
-                    duration: 2000,
+                    duration: 3000,
                     useNativeDriver: true,
                 }),
             ])
         ).start();
-    };
-
-    // startTimer and syncTimer are now handled reactively by useEffect
-
-    const stopTimer = () => {
-        // Redundant with reactive useEffect cleanup but kept for any manual overrides if needed
     };
 
     const handleStart = async () => {
@@ -151,6 +159,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
 
     const handlePauseResume = async () => {
         if (!activeSession) return;
+        Haptics.selectionAsync();
 
         if (activeSession.isPaused) {
             // Resume
@@ -173,20 +182,22 @@ export const StudyScreen = ({ route, navigation }: any) => {
             };
             await saveActiveSession(updated);
             setActiveSession(updated);
-            pulseAnim.setValue(1);
+            pulseAnim.setValue(1); // Reset glow
         }
     };
 
     const handleEnd = async () => {
         if (!activeSession || !selectedSubject) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         Alert.alert(
             'End Session?',
             'Are you sure you want to finish your study session now?',
             [
-                { text: 'Continue', style: 'cancel' },
+                { text: 'Continue Focus', style: 'cancel' },
                 {
                     text: 'Finish',
+                    style: 'default',
                     onPress: async () => {
                         const endTime = Date.now();
                         const finalDuration = seconds;
@@ -211,6 +222,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
                         await saveActiveSession(null);
                         setActiveSession(null);
                         navigation.navigate('Home');
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                     }
                 }
             ]
@@ -221,78 +233,157 @@ export const StudyScreen = ({ route, navigation }: any) => {
         const hrs = Math.floor(totalSeconds / 3600);
         const mins = Math.floor((totalSeconds % 3600) / 60);
         const secs = totalSeconds % 60;
-        return `${hrs > 0 ? hrs + ':' : ''}${mins < 10 && hrs > 0 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+        // Return structured for simpler layout logic if needed, but string is fine for now
+        // We want HH:MM:SS or MM:SS logic
+        if (hrs > 0) {
+            return `${hrs}:${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={['#000000', '#050510']} style={StyleSheet.absoluteFill} />
+
+            {/* Ambient Background Glow */}
+            {activeSession && !activeSession.isPaused && (
+                <Animated.View
+                    style={[
+                        styles.ambientGlow,
+                        {
+                            transform: [{ scale: pulseAnim }],
+                            backgroundColor: selectedSubject ? selectedSubject.color + '20' : colors.primary + '20'
+                        }
+                    ]}
+                />
+            )}
 
             <View style={styles.content}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Text style={styles.backButton}>✕</Text>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                        <Ionicons name="close" size={24} color={colors.textSecondary} />
                     </TouchableOpacity>
+
+                    {activeSession && (
+                        <View style={styles.liveIndicator}>
+                            <View style={[styles.liveDot, { backgroundColor: activeSession.isPaused ? colors.error : colors.primary }]} />
+                            <Text style={styles.liveText}>{activeSession.isPaused ? 'PAUSED' : 'LIVE FOCUS'}</Text>
+                        </View>
+                    )}
+
                     <TouchableOpacity
-                        style={[styles.ambientButton, isAmbientOn && styles.ambientButtonActive]}
-                        onPress={() => setIsAmbientOn(!isAmbientOn)}
+                        style={[styles.headerButton, isAmbientOn && styles.headerButtonActive]}
+                        onPress={() => {
+                            setIsAmbientOn(!isAmbientOn);
+                            Haptics.selectionAsync();
+                        }}
                     >
-                        <Text style={styles.ambientText}>{isAmbientOn ? '🔊 Ambient' : '🔇 Nature'}</Text>
+                        <Ionicons name={isAmbientOn ? "volume-high" : "volume-mute"} size={20} color={isAmbientOn ? colors.primary : colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
                 {/* Main Session View */}
                 {!activeSession ? (
-                    <View style={styles.setupView}>
-                        <Text style={styles.setupTitle}>Start Focus</Text>
-                        <Text style={styles.setupSubtitle}>Choose a subject to begin your deep work session.</Text>
+                    <Animated.View style={[styles.setupView, { opacity: fadeAnim }]}>
+                        <View style={styles.setupHeader}>
+                            <Text style={styles.setupTitle}>Focus Mode</Text>
+                            <Text style={styles.setupSubtitle}>Select a subject to enter deep work.</Text>
+                        </View>
 
-                        <View style={styles.subjectList}>
+                        <ScrollView
+                            contentContainerStyle={styles.subjectList}
+                            showsVerticalScrollIndicator={false}
+                        >
                             {subjects && subjects.map(subject => (
                                 <TouchableOpacity
                                     key={subject.id}
-                                    style={[styles.subjectCard, selectedSubject?.id === subject.id && { borderColor: subject.color, backgroundColor: subject.color + '20' }]}
-                                    onPress={() => setSelectedSubject(subject)}
+                                    style={[
+                                        styles.subjectCard,
+                                        selectedSubject?.id === subject.id && { borderColor: subject.color, backgroundColor: subject.color + '15' }
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedSubject(subject);
+                                        Haptics.selectionAsync();
+                                    }}
+                                    activeOpacity={0.7}
                                 >
-                                    <Text style={styles.subjectIcon}>{subject.icon}</Text>
-                                    <Text style={[styles.subjectName, selectedSubject?.id === subject.id && { color: subject.color }]}>{subject.name}</Text>
+                                    <View style={[styles.subjectIconBox, { backgroundColor: subject.color + '20' }]}>
+                                        <Text style={{ fontSize: 24 }}>{subject.icon}</Text>
+                                    </View>
+                                    <View style={styles.subjectInfo}>
+                                        <Text style={styles.subjectName}>{subject.name}</Text>
+                                        <Text style={styles.subjectStats}>{Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m focused</Text>
+                                    </View>
+                                    {selectedSubject?.id === subject.id && (
+                                        <Ionicons name="checkmark-circle" size={24} color={subject.color} />
+                                    )}
                                 </TouchableOpacity>
                             ))}
-                        </View>
+                        </ScrollView>
 
-                        <TouchableOpacity style={styles.startFab} onPress={handleStart}>
-                            <Text style={styles.startFabText}>Begin Deep Work</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={styles.footerContainer}>
+                            <TouchableOpacity
+                                style={[styles.startBtn, !selectedSubject && styles.startBtnDisabled]}
+                                onPress={handleStart}
+                                disabled={!selectedSubject}
+                            >
+                                <LinearGradient
+                                    colors={selectedSubject ? [selectedSubject.color, colors.secondary] : [colors.border, colors.border]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.startBtnGradient}
+                                >
+                                    <Text style={styles.startBtnText}>BEGIN SESSION</Text>
+                                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
                 ) : (
                     <View style={styles.focusView}>
-                        <View style={styles.targetInfo}>
-                            <Text style={styles.targetIcon}>{selectedSubject?.icon}</Text>
-                            <Text style={styles.targetSubject}>{selectedSubject?.name}</Text>
-                            {task && <Text style={styles.targetTopic}>{task.topic}</Text>}
+
+                        <View style={styles.clockContainer}>
+                            <Text style={[styles.timerText, { color: activeSession.isPaused ? colors.textSecondary : colors.text }]}>
+                                {formatTimer(seconds)}
+                            </Text>
+                            <Text style={styles.focusContext}>
+                                {selectedSubject?.name} • {task ? task.topic : 'General Study'}
+                            </Text>
                         </View>
 
-                        <Animated.View style={[styles.timerCircle, { transform: [{ scale: pulseAnim }] }]}>
-                            <Text style={styles.timerText}>{formatTimer(seconds)}</Text>
-                            <Text style={styles.timerLabel}>{activeSession.isPaused ? 'PAUSED' : 'FOCUSED ON...'}</Text>
-                        </Animated.View>
-
-                        <View style={styles.controls}>
-                            <TouchableOpacity style={styles.ctrlButton} onPress={handleEnd}>
-                                <Text style={styles.ctrlIcon}>⏹</Text>
+                        <View style={styles.controlsContainer}>
+                            <TouchableOpacity
+                                style={styles.secondaryCtrl}
+                                onPress={handleEnd}
+                            >
+                                <View style={styles.ctrlIconCircle}>
+                                    <Ionicons name="stop" size={24} color={colors.error} />
+                                </View>
                                 <Text style={styles.ctrlLabel}>Stop</Text>
                             </TouchableOpacity>
+
                             <TouchableOpacity
-                                style={[styles.ctrlButtonLarge, activeSession.isPaused && styles.ctrlButtonPaused]}
+                                style={styles.primaryCtrl}
                                 onPress={handlePauseResume}
                             >
-                                <Text style={styles.ctrlIconLarge}>{activeSession.isPaused ? '▶' : '||'}</Text>
+                                <View style={[styles.playPauseBtn, { borderColor: selectedSubject?.color || colors.primary }]}>
+                                    <Ionicons
+                                        name={activeSession.isPaused ? "play" : "pause"}
+                                        size={40}
+                                        color={colors.text}
+                                        style={{ marginLeft: activeSession.isPaused ? 4 : 0 }}
+                                    />
+                                </View>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.ctrlButton}>
-                                <Text style={styles.ctrlIcon}>🎵</Text>
-                                <Text style={styles.ctrlLabel}>Tune</Text>
+
+                            <TouchableOpacity style={styles.secondaryCtrl}>
+                                <View style={styles.ctrlIconCircle}>
+                                    <Ionicons name="options" size={24} color={colors.textSecondary} />
+                                </View>
+                                <Text style={styles.ctrlLabel}>Adjust</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -305,173 +396,222 @@ export const StudyScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: '#000000',
     },
     content: {
         flex: 1,
-        padding: spacing.lg,
+        paddingHorizontal: spacing.lg,
+    },
+    ambientGlow: {
+        position: 'absolute',
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width,
+        top: -width * 0.4,
+        left: -width * 0.25,
+        opacity: 0.3,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        marginBottom: spacing.lg,
+        zIndex: 10,
     },
-    backButton: {
-        fontSize: 24,
-        color: colors.textSecondary,
-        padding: 10,
-    },
-    ambientButton: {
+    headerButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         backgroundColor: colors.backgroundSecondary,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: borderRadius.full,
+        justifyContent: 'center',
+        alignItems: 'center',
         borderWidth: 1,
         borderColor: colors.border,
     },
-    ambientButtonActive: {
+    headerButtonActive: {
         borderColor: colors.primary,
-        backgroundColor: colors.primary + '20',
+        backgroundColor: colors.primary + '10',
     },
-    ambientText: {
-        ...typography.caption,
-        color: colors.text,
-        fontWeight: '600' as any,
+    liveIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1E1E24',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 100,
+        borderWidth: 1,
+        borderColor: '#333',
     },
+    liveDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginRight: 8,
+    },
+    liveText: {
+        color: colors.textSecondary,
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+
+    // Setup Mode
     setupView: {
         flex: 1,
-        justifyContent: 'center',
+    },
+    setupHeader: {
+        marginBottom: spacing.lg,
     },
     setupTitle: {
-        ...typography.h1,
-        fontSize: 42,
+        fontSize: 32,
+        fontWeight: '300',
         color: colors.text,
-        marginBottom: spacing.xs,
-        textAlign: 'center',
+        letterSpacing: -0.5,
     },
     setupSubtitle: {
-        ...typography.body,
+        fontSize: 14,
         color: colors.textSecondary,
-        textAlign: 'center',
-        marginBottom: spacing.xxl,
+        marginTop: 4,
     },
     subjectList: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: spacing.md,
-        justifyContent: 'center',
-        marginBottom: spacing.xxl,
+        paddingBottom: 100,
     },
     subjectCard: {
-        width: '45%',
-        padding: spacing.lg,
-        backgroundColor: colors.backgroundSecondary,
-        borderRadius: borderRadius.lg,
+        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#111116',
+        padding: spacing.md,
+        borderRadius: borderRadius.xl,
+        marginBottom: 12,
         borderWidth: 1,
-        borderColor: 'transparent',
+        borderColor: '#222',
     },
-    subjectIcon: {
-        fontSize: 32,
-        marginBottom: spacing.sm,
+    subjectIconBox: {
+        width: 50,
+        height: 50,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+    },
+    subjectInfo: {
+        flex: 1,
     },
     subjectName: {
-        ...typography.body,
-        fontWeight: '600' as any,
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.text,
+        marginBottom: 2,
+    },
+    subjectStats: {
+        fontSize: 12,
         color: colors.textSecondary,
     },
-    startFab: {
-        backgroundColor: colors.primary,
-        paddingVertical: spacing.lg,
-        borderRadius: borderRadius.xl,
+    footerContainer: {
+        position: 'absolute',
+        bottom: 40,
+        left: 0,
+        right: 0,
         alignItems: 'center',
-        marginTop: spacing.xl,
     },
-    startFabText: {
-        ...typography.h3,
-        color: colors.background,
-        fontWeight: '700' as any,
+    startBtn: {
+        width: '100%',
+        height: 56,
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
     },
+    startBtnDisabled: {
+        opacity: 0.5,
+        shadowOpacity: 0,
+    },
+    startBtnGradient: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    startBtnText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        letterSpacing: 1,
+    },
+
+    // Focus View
     focusView: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    targetInfo: {
+    clockContainer: {
         alignItems: 'center',
-        marginBottom: spacing.xxl,
-    },
-    targetIcon: {
-        fontSize: 48,
-        marginBottom: spacing.sm,
-    },
-    targetSubject: {
-        ...typography.h2,
-        color: colors.primary,
-        marginBottom: 4,
-    },
-    targetTopic: {
-        ...typography.body,
-        color: colors.textSecondary,
-    },
-    timerCircle: {
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: colors.backgroundSecondary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 4,
-        borderColor: colors.primary + '40',
-        ...shadows.large,
+        marginBottom: 80,
     },
     timerText: {
-        fontSize: 72,
-        fontWeight: '800' as any,
+        fontSize: 92,
+        fontWeight: '200',
         color: colors.text,
+        fontVariant: ['tabular-nums'],
+        letterSpacing: -2,
     },
-    timerLabel: {
-        ...typography.caption,
-        color: colors.primary,
-        letterSpacing: 2,
-        marginTop: 8,
+    focusContext: {
+        fontSize: 16,
+        color: colors.textSecondary,
+        letterSpacing: 0.5,
+        marginTop: 0,
+        fontWeight: '500',
     },
-    controls: {
+
+    // Controls
+    controlsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 80,
+        justifyContent: 'center',
+        gap: 40,
         width: '100%',
-        justifyContent: 'space-around',
     },
-    ctrlButton: {
+    secondaryCtrl: {
         alignItems: 'center',
-        opacity: 0.8,
     },
-    ctrlButtonLarge: {
+    ctrlIconCircle: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#1A1A20',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#333',
+        marginBottom: 8,
+    },
+    ctrlLabel: {
+        fontSize: 10,
+        color: colors.textSecondary,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+    },
+    primaryCtrl: {
+        alignItems: 'center',
+        marginTop: -20, // push up slightly
+    },
+    playPauseBtn: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: colors.background, // See through to glowing background somewhat if we used blur, but here solids.
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: colors.primary,
-    },
-    ctrlButtonPaused: {
-        backgroundColor: colors.primary,
-    },
-    ctrlIcon: {
-        fontSize: 24,
-        color: colors.text,
-        marginBottom: 4,
-    },
-    ctrlIconLarge: {
-        fontSize: 32,
-        color: colors.text,
-    },
-    ctrlLabel: {
-        ...typography.small,
-        color: colors.textSecondary,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 10,
     },
 });
