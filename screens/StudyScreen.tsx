@@ -187,45 +187,65 @@ export const StudyScreen = ({ route, navigation }: any) => {
 
     const handleEnd = async () => {
         if (!activeSession || !selectedSubject) return;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-        Alert.alert(
-            'End Session?',
-            'Are you sure you want to finish your study session now?',
-            [
-                { text: 'Continue Focus', style: 'cancel' },
-                {
-                    text: 'Finish',
-                    style: 'default',
-                    onPress: async () => {
-                        const endTime = Date.now();
-                        const finalDuration = seconds;
+        if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
 
-                        const completedSession: StudySession = {
-                            ...activeSession,
-                            endTime,
-                            duration: finalDuration,
-                        };
+        const finalizeSession = async () => {
+            try {
+                const endTime = Date.now();
+                const finalDuration = seconds;
 
-                        await addSession(completedSession);
+                const completedSession: StudySession = {
+                    ...activeSession,
+                    endTime,
+                    duration: finalDuration,
+                };
 
-                        const updatedSubject = {
-                            ...selectedSubject,
-                            totalStudyTime: selectedSubject.totalStudyTime + finalDuration,
-                        };
-                        await updateSubject(updatedSubject);
+                // Save session details
+                await addSession(completedSession);
 
-                        const { updateDailyStats } = require('../utils/storage');
-                        await updateDailyStats(getTodayDateString(), completedSession);
+                // Update subject total time
+                const updatedSubject = {
+                    ...selectedSubject,
+                    totalStudyTime: selectedSubject.totalStudyTime + finalDuration,
+                };
+                await updateSubject(updatedSubject);
 
-                        await saveActiveSession(null);
-                        setActiveSession(null);
-                        navigation.navigate('Home');
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    }
+                // Update daily statistics
+                const { updateDailyStats } = require('../utils/storage');
+                await updateDailyStats(getTodayDateString(), completedSession);
+
+                // Clear active session
+                await saveActiveSession(null);
+                setActiveSession(null);
+
+                // Success feedback and transition
+                if (Platform.OS !== 'web') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 }
-            ]
-        );
+                navigation.navigate('Home');
+            } catch (error) {
+                console.error('Error ending session:', error);
+                Alert.alert('Error', 'Failed to save session details. Please try again.');
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Are you sure you want to finish your study session now?')) {
+                await finalizeSession();
+            }
+        } else {
+            Alert.alert(
+                'End Session?',
+                'Are you sure you want to finish your study session now?',
+                [
+                    { text: 'Continue Focus', style: 'cancel' },
+                    { text: 'Finish', style: 'default', onPress: finalizeSession }
+                ]
+            );
+        }
     };
 
     const formatTimer = (totalSeconds: number) => {

@@ -220,7 +220,7 @@ export const PlannerScreen = ({ navigation }: any) => {
 
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.greeting}>Focus, {prefs?.academicLevel || 'Pragati'}</Text>
+                    <Text style={styles.greeting}>Focus, {prefs?.username || prefs?.fullName || 'Pragati'}</Text>
                     <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
                 </View>
                 <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>

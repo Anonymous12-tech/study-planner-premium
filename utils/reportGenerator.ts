@@ -53,13 +53,21 @@ export const generateReportHTML = (
     const goalsCompleted = todos.filter(t => t.isCompleted).length;
     const tasksCompleted = tasks.filter(t => t.isCompleted).length;
 
-    // Prepare SVG Donut Data
-    const validSubjects = subjects.filter(s => s.totalStudyTime > 0);
-    const totalSubjectTime = validSubjects.reduce((acc, s) => acc + s.totalStudyTime, 0);
+    // Prepare SVG Donut Data (Period Specific)
+    const subjectPeriodTotals: Record<string, number> = {};
+    sessions.forEach(session => {
+        subjectPeriodTotals[session.subjectId] = (subjectPeriodTotals[session.subjectId] || 0) + session.duration;
+    });
+
+    const validSubjects = subjects
+        .map(s => ({ ...s, periodTime: subjectPeriodTotals[s.id] || 0 }))
+        .filter(s => s.periodTime > 0);
+
+    const totalPeriodTime = validSubjects.reduce((acc, s) => acc + s.periodTime, 0);
 
     let currentOffset = 0;
     const donutSegments = validSubjects.map(s => {
-        const percentage = (s.totalStudyTime / totalSubjectTime) * 100;
+        const percentage = (s.periodTime / totalPeriodTime) * 100;
         const dashArray = `${percentage} ${100 - percentage}`;
         const dashOffset = -currentOffset;
         currentOffset += percentage;
@@ -85,7 +93,7 @@ export const generateReportHTML = (
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #E2E8F0;
+            color: #FFFFFF; /* Brighter for print */
             overflow: hidden;
         }
 
@@ -177,8 +185,8 @@ export const generateReportHTML = (
             bottom: 0; left: 20%; right: 20%; height: 2px;
             background: linear-gradient(to right, transparent, #06B6D4, transparent);
         }
-        .stat-val { font-size: 32px; font-weight: 900; color: #F8FAFC; display: block; margin-bottom: 2px; }
-        .stat-label { font-size: 9px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1.5px; }
+        .stat-val { font-size: 32px; font-weight: 900; color: #FFFFFF; display: block; margin-bottom: 2px; }
+        .stat-label { font-size: 9px; font-weight: 700; color: #E2E8F0; text-transform: uppercase; letter-spacing: 1.5px; }
 
         /* Visuals - Compact */
         .visuals {
@@ -227,7 +235,7 @@ export const generateReportHTML = (
         }
         
         .box-title {
-            font-size: 9px; font-weight: 800; color: #94A3B8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;
+            font-size: 9px; font-weight: 800; color: #E2E8F0; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;
             border-bottom: 1px solid #1E293B; padding-bottom: 5px;
             flex-shrink: 0;
         }
@@ -238,8 +246,8 @@ export const generateReportHTML = (
             display: flex; flex-direction: column; gap: 8px;
         }
 
-        .check-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #E2E8F0; }
-        .check-item.done { text-decoration: line-through; color: #475569; }
+        .check-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #FFFFFF; }
+        .check-item.done { text-decoration: line-through; color: #94A3B8; }
         .check-icon { font-size: 11px; }
 
         /* Footer Quote */
@@ -262,7 +270,7 @@ export const generateReportHTML = (
         }
 
         .brand-tiny {
-            font-size: 10px; font-weight: 700; color: #64748B; letter-spacing: 2px; text-transform: uppercase;
+            font-size: 10px; font-weight: 700; color: #94A3B8; letter-spacing: 2px; text-transform: uppercase;
         }
 
         /* Page 2 Specifics */
@@ -307,7 +315,7 @@ export const generateReportHTML = (
         <div class="header">
             <div>
                 <div class="brand-name">Focus<span class="accent-text">Flow</span></div>
-                <div style="font-size: 9px; font-weight: 700; color: #94A3B8; letter-spacing: 3px; margin-top: 2px; text-transform: uppercase;">
+                <div style="font-size: 9px; font-weight: 700; color: #E2E8F0; letter-spacing: 3px; margin-top: 2px; text-transform: uppercase;">
                     Performance Report // ${period}
                 </div>
             </div>
@@ -344,19 +352,19 @@ export const generateReportHTML = (
                     <div class="donut-inner">⚡</div>
                 </div>
                 <div class="legend">
-                    <div style="font-size: 9px; font-weight: 800; color: #94A3B8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Resource Allocation</div>
-                    ${validSubjects.slice(0, 4).map(s => `
+                    <div style="font-size: 9px; font-weight: 800; color: #E2E8F0; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Resource Allocation</div>
+                    ${validSubjects.slice(0, 4).map((s: any) => `
                         <div class="leg-item">
                             <div class="leg-cap" style="background-color: ${s.color};"></div>
                             <div style="flex: 1">${s.name}</div>
-                            <div style="color: #64748B">${Math.floor(s.totalStudyTime / 60)}m</div>
+                            <div style="color: #94A3B8">${Math.floor(s.periodTime / 60)}m</div>
                         </div>
                     `).join('')}
                 </div>
             </div>
 
             <div class="badges-box">
-                <div style="font-size: 9px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px;">Achievements</div>
+                <div style="font-size: 9px; font-weight: 800; color: #E2E8F0; text-transform: uppercase; letter-spacing: 1px;">Achievements</div>
                 <div class="badge-grid">
                     ${unlockedBadges.slice(0, 4).map(b => `
                         <div class="b-mini">
@@ -364,7 +372,7 @@ export const generateReportHTML = (
                             <div class="b-name">${b.title}</div>
                         </div>
                     `).join('')}
-                    ${unlockedBadges.length === 0 ? '<div style="grid-column: span 2; padding: 15px; color: #475569; text-align: center; font-size: 9px;">No Activations</div>' : ''}
+                    ${unlockedBadges.length === 0 ? '<div style="grid-column: span 2; padding: 15px; color: #94A3B8; text-align: center; font-size: 9px;">No Activations</div>' : ''}
                 </div>
             </div>
         </div>
@@ -379,7 +387,7 @@ export const generateReportHTML = (
                         <span class="check-icon">${t.isCompleted ? '☑' : '☐'}</span>
                         <span>${t.text}</span>
                     </div>
-                `).join('') : '<div style="font-size: 10px; color: #475569; font-style: italic;">No goals recorded.</div>'}
+                `).join('') : '<div style="font-size: 10px; color: #CBD5E1; font-style: italic;">No goals recorded.</div>'}
                 </div>
             </div>
 
@@ -394,7 +402,7 @@ export const generateReportHTML = (
                         <span style="font-weight: 600; color: ${subject?.color || '#94A3B8'}">[${subject?.name || 'GEN'}]</span>
                         <span>${t.topic}</span>
                     </div>`;
-    }).join('') : '<div style="font-size: 10px; color: #475569; font-style: italic;">No sessions recorded.</div>'}
+    }).join('') : '<div style="font-size: 10px; color: #94A3B8; font-style: italic;">No sessions recorded.</div>'}
                 </div>
             </div>
         </div>

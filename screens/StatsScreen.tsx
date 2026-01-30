@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Platform, TouchableOpacity, Share, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Platform, TouchableOpacity, Share, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
 import { Card } from '../components/ui/Card';
-import { getSessions, getDailyStats, getSubjects, getTasks, getTodos } from '../utils/storage';
+import { getSessions, getDailyStats, getSubjects, getTasks, getTodos, hasLocalData, migrateLocalData, clearLocalData } from '../utils/storage';
 import {
     calculateStatistics,
     formatTime,
@@ -31,6 +31,8 @@ export const StatsScreen = () => {
     const [todos, setTodos] = useState<StudyTodo[]>([]);
     const [period, setPeriod] = useState<PeriodType>('week');
     const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
+    const [localDataExists, setLocalDataExists] = useState(false);
+    const [migrating, setMigrating] = useState(false);
 
     const loadData = async () => {
         const [sessionsData, dailyStats, subjectsData, tasksData, todosData] = await Promise.all([
@@ -53,8 +55,39 @@ export const StatsScreen = () => {
     useFocusEffect(
         useCallback(() => {
             loadData();
+            checkLocal();
         }, [])
     );
+
+    const checkLocal = async () => {
+        const exists = await hasLocalData();
+        setLocalDataExists(exists);
+    };
+
+    const handleMigrate = async () => {
+        Alert.alert(
+            'Migrate Data',
+            'This will upload your old local data to the cloud. New data will not be overwritten.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Migrate Now',
+                    onPress: async () => {
+                        setMigrating(true);
+                        const result = await migrateLocalData();
+                        setMigrating(false);
+                        if (result.success) {
+                            Alert.alert('Success', `Successfully migrated ${result.count} items!`);
+                            setLocalDataExists(false);
+                            loadData();
+                        } else {
+                            Alert.alert('Error', result.error || 'Failed to migrate data');
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const handleShare = async () => {
         const periodSessions = filterSessionsByPeriod(sessions, period);
@@ -68,23 +101,46 @@ export const StatsScreen = () => {
 
         try {
             const html = generateReportHTML(period, stats, subjects, periodSessions, achievements, tasks, todos);
-            const { uri } = await Print.printToFileAsync({
-                html,
-                margins: { left: 0, top: 0, right: 0, bottom: 0 }
-            });
 
-            await Sharing.shareAsync(uri, {
-                mimeType: 'application/pdf',
-                dialogTitle: `My Study Recap - ${period.toUpperCase()}`,
-                UTI: 'com.adobe.pdf',
-            });
+            if (Platform.OS === 'web') {
+                // For web, we create a new window and print from there to ensure isolation
+                // This is more reliable than the default expo-print iframe implementation on some browsers
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+                    // Wait for resources to load if any (like fonts)
+                    printWindow.onload = () => {
+                        printWindow.print();
+                    };
+                } else {
+                    // Fallback to printAsync if window opening is blocked
+                    await Print.printAsync({ html });
+                }
+            } else {
+                const { uri } = await Print.printToFileAsync({
+                    html,
+                    margins: { left: 0, top: 0, right: 0, bottom: 0 }
+                });
+
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: `My Study Recap - ${period.toUpperCase()}`,
+                    UTI: 'com.adobe.pdf',
+                });
+            }
         } catch (error: any) {
             Alert.alert('Report Failed', 'Could not generate your visual recap. Please try again.');
             console.error(error);
         }
     };
 
-    if (!stats) return null;
+    if (!stats) return (
+        <View style={styles.container}>
+            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
+        </View>
+    );
 
     // Filter sessions for recap
     const recapSessions = filterSessionsByPeriod(sessions, period);
@@ -105,15 +161,22 @@ export const StatsScreen = () => {
         }],
     };
 
+    // Calculate subject totals for the selected period
+    const subjectPeriodTotals: Record<string, number> = {};
+    recapSessions.forEach(session => {
+        const current = subjectPeriodTotals[session.subjectId] || 0;
+        subjectPeriodTotals[session.subjectId] = current + session.duration;
+    });
+
     const pieData = (subjects || [])
-        .filter(s => s && s.totalStudyTime > 0)
         .map(s => ({
             name: s.name,
-            population: Math.floor(s.totalStudyTime / 60),
+            population: Math.floor((subjectPeriodTotals[s.id] || 0) / 60),
             color: s.color,
             legendFontColor: colors.textSecondary,
             legendFontSize: 12,
-        }));
+        }))
+        .filter(data => data.population > 0);
 
     const chartConfig = {
         backgroundGradientFrom: colors.backgroundSecondary,
@@ -141,7 +204,30 @@ export const StatsScreen = () => {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {localDataExists && (
+                    <Card style={styles.migrationCard}>
+                        <View style={styles.migrationInfo}>
+                            <Text style={styles.migrationEmoji}>📦</Text>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.migrationTitle}>Legacy Data Found</Text>
+                                <Text style={styles.migrationSubtitle}>Transfer your old local data to your cloud account.</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.migrationButton, migrating && { opacity: 0.7 }]}
+                            onPress={handleMigrate}
+                            disabled={migrating}
+                        >
+                            {migrating ? (
+                                <ActivityIndicator size="small" color={colors.background} />
+                            ) : (
+                                <Text style={styles.migrationButtonText}>Migrate to Cloud</Text>
+                            )}
+                        </TouchableOpacity>
+                    </Card>
+                )}
+
                 {/* Stats Summary Grid */}
                 <View style={styles.summaryGrid}>
                     <Card style={styles.summaryCard}>
@@ -344,7 +430,7 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontWeight: '700' as any,
     },
-    content: {
+    scrollContent: {
         flex: 1,
         paddingHorizontal: spacing.lg,
     },
@@ -576,5 +662,40 @@ const styles = StyleSheet.create({
         fontWeight: '800' as any,
         color: colors.primary,
         opacity: 0.8,
+    },
+    migrationCard: {
+        marginBottom: spacing.xl,
+        backgroundColor: colors.primary + '10',
+        borderColor: colors.primary + '30',
+        borderWidth: 1,
+        padding: spacing.lg,
+    },
+    migrationInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: spacing.md,
+    },
+    migrationEmoji: {
+        fontSize: 32,
+        marginRight: spacing.md,
+    },
+    migrationTitle: {
+        ...typography.h3,
+        color: colors.primary,
+    },
+    migrationSubtitle: {
+        ...typography.caption,
+        color: colors.textSecondary,
+    },
+    migrationButton: {
+        backgroundColor: colors.primary,
+        paddingVertical: spacing.md,
+        borderRadius: borderRadius.md,
+        alignItems: 'center',
+    },
+    migrationButtonText: {
+        ...typography.body,
+        fontWeight: 'bold' as any,
+        color: colors.background,
     },
 });

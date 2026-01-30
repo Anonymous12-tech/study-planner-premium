@@ -47,6 +47,8 @@ export interface ExamDeadline {
 
 export interface UserPreferences {
     onboardingComplete: boolean;
+    fullName?: string;
+    username?: string;
     academicLevel?: string;
     dailyGoalMinutes: number;
     accentColor?: string;

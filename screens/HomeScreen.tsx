@@ -122,7 +122,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 {/* Header Section */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.greeting}>Focus, {prefs?.academicLevel || 'Student'}</Text>
+                        <Text style={styles.greeting}>Focus, {prefs?.username || prefs?.fullName || 'Student'}</Text>
                         <Text style={styles.date}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
                     </View>
                     <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>

@@ -32,13 +32,15 @@ const DEFAULT_SUBJECTS = [
 
 export const OnboardingScreen = ({ navigation }: any) => {
     const [step, setStep] = useState(0);
+    const [fullName, setFullName] = useState('');
+    const [username, setUsername] = useState('');
     const [examType, setExamType] = useState('');
     const [selectedSubjects, setSelectedSubjects] = useState<typeof DEFAULT_SUBJECTS>([]);
     const [dailyGoal, setDailyGoal] = useState(120); // minutes
 
     const handleNext = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        if (step < 2) {
+        if (step < 3) {
             setStep(step + 1);
         } else {
             // Finalize
@@ -58,14 +60,47 @@ export const OnboardingScreen = ({ navigation }: any) => {
 
             await saveUserPreferences({
                 onboardingComplete: true,
+                fullName,
+                username,
                 academicLevel: examType,
                 dailyGoalMinutes: dailyGoal,
-                selectedSubjectIds: [], // We'll skip this or update it if needed
+                selectedSubjectIds: [],
             });
 
             navigation.replace('Home');
         }
     };
+
+    const renderIdentity = () => (
+        <View style={styles.stepContainer}>
+            <Text style={styles.headline}>Who are you?</Text>
+            <Text style={styles.subheadline}>Tell us your name and pick a username to personalize your profile.</Text>
+
+            <View style={{ gap: spacing.lg }}>
+                <View>
+                    <Text style={[styles.label, { marginBottom: 8 }]}>Full Name</Text>
+                    <Input
+                        placeholder="Enter your name"
+                        value={fullName}
+                        onChangeText={setFullName}
+                        autoCapitalize="words"
+                    />
+                </View>
+                <View>
+                    <Text style={[styles.label, { marginBottom: 8 }]}>Username</Text>
+                    <Input
+                        placeholder="Choose a username"
+                        value={username}
+                        onChangeText={setUsername}
+                        autoCapitalize="none"
+                    />
+                    <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 4 }}>
+                        Available only for this account.
+                    </Text>
+                </View>
+            </View>
+        </View>
+    );
 
     const toggleSubject = (subj: typeof DEFAULT_SUBJECTS[0]) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -163,28 +198,32 @@ export const OnboardingScreen = ({ navigation }: any) => {
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.progressContainer}>
-                    {[0, 1, 2].map(i => (
+                    {[0, 1, 2, 3].map(i => (
                         <View
                             key={i}
                             style={[
                                 styles.progressBar,
                                 step >= i && styles.progressBarActive,
-                                { width: (width - spacing.lg * 2) / 3 - 8 }
+                                { width: (width - spacing.lg * 2) / 4 - 8 }
                             ]}
                         />
                     ))}
                 </View>
 
-                {step === 0 && renderStep0()}
-                {step === 1 && renderStep1()}
-                {step === 2 && renderStep2()}
+                {step === 0 && renderIdentity()}
+                {step === 1 && renderStep0()}
+                {step === 2 && renderStep1()}
+                {step === 3 && renderStep2()}
             </ScrollView>
 
             <View style={styles.footer}>
                 <Button
-                    title={step === 2 ? "Get Started" : "Continue"}
+                    title={step === 3 ? "Get Started" : "Continue"}
                     onPress={handleNext}
-                    disabled={step === 0 && !examType}
+                    disabled={
+                        (step === 0 && (!fullName || !username)) ||
+                        (step === 1 && !examType)
+                    }
                 />
             </View>
         </View>
