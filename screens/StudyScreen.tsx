@@ -244,7 +244,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={['#000000', '#050510']} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
 
             {/* Ambient Background Glow */}
             {activeSession && !activeSession.isPaused && (
@@ -395,7 +395,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
+        backgroundColor: colors.background,
     },
     content: {
         flex: 1,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     liveIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1E1E24',
+        backgroundColor: colors.backgroundSecondary,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 100,
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     subjectCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#111116',
+        backgroundColor: colors.backgroundTertiary,
         padding: spacing.md,
         borderRadius: borderRadius.xl,
         marginBottom: 12,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#1A1A20',
+        backgroundColor: colors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,

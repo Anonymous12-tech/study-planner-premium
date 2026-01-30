@@ -283,7 +283,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                 </View>
 
                 {(todos || []).map(todo => (
-                    <Card key={todo.id} style={styles.todoCard}>
+                    <Card key={todo.id} style={styles.todoCard} variant="solid">
                         <TouchableOpacity style={styles.todoContent} onPress={() => toggleTodo(todo)}>
                             <View style={[styles.checkbox, todo.isCompleted && styles.checkboxChecked]}>
                                 {todo.isCompleted && <Text style={styles.checkIcon}>✓</Text>}
@@ -306,7 +306,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                 {(tasks || []).map(task => {
                     const subject = subjects.find(s => s.id === task.subjectId);
                     return (
-                        <Card key={task.id} style={styles.taskCard}>
+                        <Card key={task.id} style={styles.taskCard} variant="solid">
                             <TouchableOpacity style={styles.taskTouch} onPress={() => toggleTask(task)}>
                                 <View style={[styles.subjectIndicator, { backgroundColor: subject?.color || colors.primary }]} />
                                 <View style={styles.taskInfo}>
