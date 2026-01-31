@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
+import { useFocus } from '../context/FocusContext';
 import { Subject, StudySession, StudyTask } from '../types';
 import {
     getSubjects,
@@ -37,6 +38,7 @@ const { width, height } = Dimensions.get('window');
 export const StudyScreen = ({ route, navigation }: any) => {
     const { colors, gradients } = useTheme();
     const { taskId, subjectId } = route.params || {};
+    const { setIsFocusing } = useFocus();
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -95,6 +97,11 @@ export const StudyScreen = ({ route, navigation }: any) => {
             subscription.remove();
         };
     }, []);
+
+    useEffect(() => {
+        // Sync focus state with context for Realtime presence
+        setIsFocusing(!!activeSession && !activeSession.isPaused);
+    }, [activeSession]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;

@@ -17,6 +17,7 @@ import { colors as baseColors, spacing, typography, borderRadius, gradients as b
 import { useTheme } from '../context/ThemeContext';
 import { Card } from '../components/ui/Card';
 import { CircularProgress } from '../components/ui/CircularProgress';
+import { useFocus } from '../context/FocusContext';
 import {
     getTasks,
     getUserPreferences,
@@ -37,6 +38,7 @@ export const HomeScreen = ({ navigation }: any) => {
     const [refreshing, setRefreshing] = useState(false);
     const [todayMinutes, setTodayMinutes] = useState(0);
     const [chartData, setChartData] = useState<any>(null);
+    const { activeStudentsCount } = useFocus();
 
     const loadData = async () => {
         const today = getTodayDateString();
@@ -144,6 +146,23 @@ export const HomeScreen = ({ navigation }: any) => {
                     <View>
                         <Text style={styles.greeting}>Focus, {prefs?.username || prefs?.fullName || 'Student'}</Text>
                         <Text style={styles.date}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
+                        <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 100,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255,255,255,0.1)'
+                            }}>
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e', marginRight: 8 }} />
+                                <Text style={{ ...typography.caption, color: '#fff', fontWeight: '700' as any }}>
+                                    {activeStudentsCount > 0 ? `${activeStudentsCount} Students Focusing` : 'Focus Room: Live'}
+                                </Text>
+                            </View>
+                        </View>
                     </View>
                     <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>
                         <Ionicons name="flame" size={16} color={colors.primary} style={{ marginRight: 4 }} />
