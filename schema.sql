@@ -22,6 +22,7 @@ create table public.profiles (
   accent_color text,
   selected_subject_ids text[], -- Array of strings
   active_theme_id text default 'default',
+  is_pro boolean default false,
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 

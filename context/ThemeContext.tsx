@@ -5,7 +5,7 @@ import { UserPreferences } from '../types';
 
 interface ThemeContextType {
     colors: typeof baseColors;
-    gradients: typeof baseGradients;
+    gradients: typeof baseGradients & { aura: string[] };
     activeAura: Aura;
     setAura: (auraId: string) => Promise<void>;
 }
@@ -53,6 +53,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const themeGradients = {
         ...baseGradients,
         primary: activeAura.gradients,
+        aura: [activeAura.primary + '15', '#020617'], // Adds an ambient thematic background
     };
 
     return (

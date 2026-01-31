@@ -379,6 +379,7 @@ export const getUserPreferences = async (): Promise<UserPreferences | null> => {
             accentColor: data.accent_color,
             selectedSubjectIds: data.selected_subject_ids || [],
             activeThemeId: data.active_theme_id,
+            isPro: data.is_pro || false,
         };
     } catch (error) {
         console.error('Error getting preferences:', error);
@@ -401,6 +402,7 @@ export const saveUserPreferences = async (prefs: UserPreferences): Promise<void>
             accent_color: prefs.accentColor,
             selected_subject_ids: prefs.selectedSubjectIds,
             active_theme_id: prefs.activeThemeId,
+            is_pro: prefs.isPro || false,
         });
         if (error) throw error;
     } catch (error) {

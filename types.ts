@@ -54,6 +54,7 @@ export interface UserPreferences {
     accentColor?: string;
     selectedSubjectIds: string[];
     activeThemeId?: string;
+    isPro?: boolean;
 }
 
 export interface DailyStats {

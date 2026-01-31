@@ -238,6 +238,10 @@ export const checkAuraUnlock = (auraId: string, stats: Statistics): boolean => {
             return stats.totalSessions >= 100;
         case 'midnight':
             return stats.currentStreak >= 14 || stats.longestStreak >= 14;
+        case 'cyberpunk':
+        case 'sakura':
+        case 'oceanic':
+            return true; // Unlocked by default (Pro status handled in UI)
         default:
             return false;
     }

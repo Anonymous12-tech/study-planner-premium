@@ -222,7 +222,7 @@ export const PlannerScreen = ({ navigation }: any) => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
 
             <View style={styles.header}>
                 <View>
@@ -241,23 +241,25 @@ export const PlannerScreen = ({ navigation }: any) => {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
             >
                 {/* Progress Card */}
-                <View style={styles.progressSection}>
-                    <CircularProgress percentage={getCompletionPercentage()} size={160} label={getProgressLabel()} />
-                    <View style={styles.actionGrid}>
-                        <TouchableOpacity style={styles.actionItem} onPress={() => setTaskModalVisible(true)}>
-                            <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
-                                <Ionicons name="add-circle" size={28} color={colors.primary} />
-                            </View>
-                            <Text style={styles.actionLabel}>Add Task</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionItem} onPress={() => setTodoModalVisible(true)}>
-                            <View style={[styles.actionIcon, { backgroundColor: colors.secondary + '15' }]}>
-                                <Ionicons name="checkmark-done-circle" size={28} color={colors.secondary} />
-                            </View>
-                            <Text style={styles.actionLabel}>Add Goal</Text>
-                        </TouchableOpacity>
+                <Card style={styles.progressSection} variant="glass" padding="none">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, width: '100%' }}>
+                        <CircularProgress percentage={getCompletionPercentage()} size={160} label={getProgressLabel()} />
+                        <View style={styles.actionGrid}>
+                            <TouchableOpacity style={styles.actionItem} onPress={() => setTaskModalVisible(true)}>
+                                <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
+                                    <Ionicons name="add-circle" size={28} color={colors.primary} />
+                                </View>
+                                <Text style={styles.actionLabel}>Add Task</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.actionItem} onPress={() => setTodoModalVisible(true)}>
+                                <View style={[styles.actionIcon, { backgroundColor: colors.secondary + '15' }]}>
+                                    <Ionicons name="checkmark-done-circle" size={28} color={colors.secondary} />
+                                </View>
+                                <Text style={styles.actionLabel}>Add Goal</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
+                </Card>
 
                 {renderCalendar()}
 
@@ -292,20 +294,22 @@ export const PlannerScreen = ({ navigation }: any) => {
                 </View>
 
                 {(todos || []).map(todo => (
-                    <Card key={todo.id} style={styles.todoCard} variant="solid">
-                        <TouchableOpacity style={styles.todoContent} onPress={() => toggleTodo(todo)}>
-                            <View style={[
-                                styles.checkbox,
-                                { borderColor: colors.primary },
-                                todo.isCompleted && { backgroundColor: colors.primary }
-                            ]}>
-                                {todo.isCompleted && <Text style={styles.checkIcon}>✓</Text>}
-                            </View>
-                            <Text style={[styles.todoText, todo.isCompleted && styles.todoTextCompleted]}>{todo.text}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => { deleteTodo(todo.id).then(loadData); }}>
-                            <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
-                        </TouchableOpacity>
+                    <Card key={todo.id} style={styles.todoCard} variant="glass" padding="none">
+                        <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, flex: 1 }}>
+                            <TouchableOpacity style={styles.todoContent} onPress={() => toggleTodo(todo)}>
+                                <View style={[
+                                    styles.checkbox,
+                                    { borderColor: colors.primary },
+                                    todo.isCompleted && { backgroundColor: colors.primary }
+                                ]}>
+                                    {todo.isCompleted && <Text style={styles.checkIcon}>✓</Text>}
+                                </View>
+                                <Text style={[styles.todoText, todo.isCompleted && styles.todoTextCompleted]}>{todo.text}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => { deleteTodo(todo.id).then(loadData); }}>
+                                <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
+                            </TouchableOpacity>
+                        </View>
                     </Card>
                 ))}
                 {todos.length === 0 && <Text style={styles.emptySmall}>No quick goals set for this day.</Text>}
@@ -319,8 +323,8 @@ export const PlannerScreen = ({ navigation }: any) => {
                 {(tasks || []).map(task => {
                     const subject = subjects.find(s => s.id === task.subjectId);
                     return (
-                        <Card key={task.id} style={styles.taskCard} variant="solid">
-                            <TouchableOpacity style={styles.taskTouch} onPress={() => toggleTask(task)}>
+                        <Card key={task.id} style={styles.taskCard} variant="glass" padding="none">
+                            <View style={styles.taskTouch}>
                                 <View style={[styles.subjectIndicator, { backgroundColor: subject?.color || colors.primary }]} />
                                 <View style={styles.taskInfo}>
                                     <View style={styles.taskRow}>
@@ -343,7 +347,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                                         <Text style={[styles.taskActionText, { color: colors.primary }]}>Focus</Text>
                                     </TouchableOpacity>
                                 )}
-                            </TouchableOpacity>
+                            </View>
                             <TouchableOpacity style={styles.deleteAbsolute} onPress={() => { deleteTask(task.id).then(loadData); }}>
                                 <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
                             </TouchableOpacity>
@@ -417,7 +421,10 @@ export const PlannerScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: baseColors.background },
+    container: {
+        flex: 1,
+        backgroundColor: baseColors.background,
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -439,17 +446,10 @@ const styles = StyleSheet.create({
         borderColor: baseColors.border,
     },
     streakEmoji: { fontSize: 18, marginRight: 6 },
-    streakText: { ...typography.small, fontWeight: '700' as any },
+    streakText: { ...typography.small, fontWeight: '700' as any, color: baseColors.text },
     content: { flex: 1, paddingHorizontal: spacing.lg },
     progressSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
         marginBottom: spacing.xl,
-        backgroundColor: baseColors.backgroundSecondary,
-        padding: spacing.lg,
-        borderRadius: borderRadius.xl,
-        ...shadows.medium,
     },
     actionGrid: { gap: 12 },
     actionItem: { alignItems: 'center' },

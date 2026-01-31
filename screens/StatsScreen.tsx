@@ -1,12 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Platform, TouchableOpacity, Share, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Platform, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BarChart, PieChart } from 'react-native-chart-kit';
+import { BarChart } from 'react-native-chart-kit';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
 import { Card } from '../components/ui/Card';
-import { getSessions, getDailyStats, getSubjects, getTasks, getTodos, hasLocalData, migrateLocalData, clearLocalData } from '../utils/storage';
+import { getSessions, getDailyStats, getSubjects, getTasks, getTodos, hasLocalData, migrateLocalData, getUserPreferences, saveUserPreferences } from '../utils/storage';
 import {
     calculateStatistics,
     formatTime,
@@ -19,7 +19,7 @@ import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../type
 import { BadgeItem } from '../components/BadgeItem';
 import { MomentumHeatmap } from '../components/MomentumHeatmap';
 import { useTheme } from '../context/ThemeContext';
-import { AURAS, Aura } from '../constants/theme';
+import { AURAS } from '../constants/theme';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import { generateReportHTML } from '../utils/reportGenerator';
@@ -40,23 +40,44 @@ export const StatsScreen = () => {
     const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
     const [localDataExists, setLocalDataExists] = useState(false);
     const [migrating, setMigrating] = useState(false);
+    const [isPro, setIsPro] = useState(false);
 
     const loadData = async () => {
-        const [sessionsData, dailyStats, subjectsData, tasksData, todosData] = await Promise.all([
-            getSessions(),
-            getDailyStats(),
-            getSubjects(),
-            getTasks(),
-            getTodos(),
-        ]);
+        try {
+            const [sessionsData, dailyStats, subjectsData, tasksData, todosData, prefs] = await Promise.all([
+                getSessions(),
+                getDailyStats(),
+                getSubjects(),
+                getTasks(),
+                getTodos(),
+                getUserPreferences(),
+            ]);
 
-        const statistics = calculateStatistics(sessionsData, dailyStats);
-        setStats(statistics);
-        setSubjects(subjectsData);
-        setSessions(sessionsData);
-        setTasks(tasksData);
-        setTodos(todosData);
-        setAchievements(getAchievements(sessionsData, dailyStats));
+            const statistics = calculateStatistics(sessionsData, dailyStats);
+            setStats(statistics);
+            setSubjects(subjectsData);
+            setSessions(sessionsData);
+            setTasks(tasksData);
+            setTodos(todosData);
+            setAchievements(getAchievements(sessionsData, dailyStats));
+            if (prefs) setIsPro(prefs.isPro || false);
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    };
+
+    const togglePro = async () => {
+        const newProValue = !isPro;
+        setIsPro(newProValue);
+
+        const prefs = await getUserPreferences();
+        if (prefs) {
+            await saveUserPreferences({ ...prefs, isPro: newProValue });
+            Alert.alert(
+                newProValue ? 'Pro Activated' : 'Pro Deactivated',
+                newProValue ? 'You now have access to premium Auras!' : 'Premium features locked.'
+            );
+        }
     };
 
     useFocusEffect(
@@ -98,84 +119,59 @@ export const StatsScreen = () => {
 
     const handleShare = async () => {
         const periodSessions = filterSessionsByPeriod(sessions, period);
-
         if (periodSessions.length === 0) {
             Alert.alert('No Data', `You haven't completed any goals this ${period} to share!`);
             return;
         }
-
         if (!stats) return;
 
         try {
             const html = generateReportHTML(period, stats, subjects, periodSessions, achievements, tasks, todos);
-
             if (Platform.OS === 'web') {
-                // For web, we create a new window and print from there to ensure isolation
-                // This is more reliable than the default expo-print iframe implementation on some browsers
                 const printWindow = window.open('', '_blank');
                 if (printWindow) {
                     printWindow.document.write(html);
                     printWindow.document.close();
-                    // Wait for resources to load if any (like fonts)
-                    printWindow.onload = () => {
-                        printWindow.print();
-                    };
+                    printWindow.onload = () => printWindow.print();
                 } else {
-                    // Fallback to printAsync if window opening is blocked
                     await Print.printAsync({ html });
                 }
             } else {
-                const { uri } = await Print.printToFileAsync({
-                    html,
-                    margins: { left: 0, top: 0, right: 0, bottom: 0 }
-                });
-
-                await Sharing.shareAsync(uri, {
-                    mimeType: 'application/pdf',
-                    dialogTitle: `My Study Recap - ${period.toUpperCase()}`,
-                    UTI: 'com.adobe.pdf',
-                });
+                const { uri } = await Print.printToFileAsync({ html, margins: { left: 0, top: 0, right: 0, bottom: 0 } });
+                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
             }
-        } catch (error: any) {
-            Alert.alert('Report Failed', 'Could not generate your visual recap. Please try again.');
-            console.error(error);
+        } catch (error) {
+            Alert.alert('Report Failed', 'Could not generate your visual recap.');
         }
     };
 
     if (!stats) return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
             <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
         </View>
     );
 
-    // Filter sessions for recap
     const recapSessions = filterSessionsByPeriod(sessions, period);
     const recapTotalMinutes = recapSessions.reduce((acc, s) => acc + s.duration, 0) / 60;
 
-    // Prepare chart data
     const dailyStatsData = stats.dailyStats || [];
     const last7Days = dailyStatsData.slice(-7);
     const lineData = {
-        labels: (last7Days || []).map(d => {
-            const parts = (d.date || '').split('-');
-            return parts.length > 2 ? parts[2] : '';
-        }),
+        labels: last7Days.map(d => d.date.split('-')[2] || ''),
         datasets: [{
-            data: (last7Days || []).map(d => Math.floor((d.totalStudyTime || 0) / 60)),
+            data: last7Days.map(d => Math.floor(d.totalStudyTime / 60)),
             color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
             strokeWidth: 3
         }],
     };
 
-    // Calculate subject totals for the selected period
     const subjectPeriodTotals: Record<string, number> = {};
     recapSessions.forEach(session => {
-        const current = subjectPeriodTotals[session.subjectId] || 0;
-        subjectPeriodTotals[session.subjectId] = current + session.duration;
+        subjectPeriodTotals[session.subjectId] = (subjectPeriodTotals[session.subjectId] || 0) + session.duration;
     });
 
-    const pieData = (subjects || [])
+    const pieData = subjects
         .map(s => ({
             name: s.name,
             population: Math.floor((subjectPeriodTotals[s.id] || 0) / 60),
@@ -186,27 +182,20 @@ export const StatsScreen = () => {
         .filter(data => data.population > 0);
 
     const chartConfig = {
-        backgroundGradientFrom: colors.backgroundSecondary,
-        backgroundGradientTo: colors.backgroundSecondary,
+        backgroundGradientFrom: 'transparent',
+        backgroundGradientTo: 'transparent',
         color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
         labelColor: (opacity = 1) => colors.textSecondary,
         strokeWidth: 2,
         barPercentage: 0.7,
         decimalPlaces: 0,
-        propsForBackgroundLines: {
-            strokeDasharray: '',
-            stroke: colors.border,
-            strokeWidth: 1,
-            opacity: 0.1,
-        },
-        propsForLabels: {
-            fontSize: 10,
-        },
+        propsForBackgroundLines: { strokeDasharray: '', stroke: colors.border, strokeWidth: 1, opacity: 0.1 },
+        propsForLabels: { fontSize: 10 },
     };
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
 
             <View style={styles.header}>
                 <Text style={styles.title}>Analytics</Text>
@@ -222,7 +211,7 @@ export const StatsScreen = () => {
                             <Text style={styles.migrationEmoji}>📦</Text>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.migrationTitle}>Legacy Data Found</Text>
-                                <Text style={styles.migrationSubtitle}>Transfer your old local data to your cloud account.</Text>
+                                <Text style={styles.migrationSubtitle}>Transfer your old local data to the cloud.</Text>
                             </View>
                         </View>
                         <TouchableOpacity
@@ -230,35 +219,27 @@ export const StatsScreen = () => {
                             onPress={handleMigrate}
                             disabled={migrating}
                         >
-                            {migrating ? (
-                                <ActivityIndicator size="small" color={colors.background} />
-                            ) : (
-                                <Text style={styles.migrationButtonText}>Migrate to Cloud</Text>
-                            )}
+                            {migrating ? <ActivityIndicator size="small" color={colors.background} /> : <Text style={styles.migrationButtonText}>Migrate to Cloud</Text>}
                         </TouchableOpacity>
                     </Card>
                 )}
 
-                {/* Stats Summary Grid */}
                 <View style={styles.summaryGrid}>
-                    <Card style={styles.summaryCard} variant="solid">
-                        <LinearGradient colors={['rgba(34, 211, 238, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
+                    <Card style={styles.summaryCard} variant="glass">
                         <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '15' }]}>
                             <Ionicons name="time" size={20} color={colors.primary} />
                         </View>
                         <Text style={styles.summaryValue}>{Math.floor(stats.totalStudyTime / 3600)}<Text style={styles.unit}>h</Text></Text>
                         <Text style={styles.summaryLabel}>Total Focused</Text>
                     </Card>
-                    <Card style={styles.summaryCard} variant="solid">
-                        <LinearGradient colors={['rgba(129, 140, 248, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
+                    <Card style={styles.summaryCard} variant="glass">
                         <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '15' }]}>
                             <Ionicons name="flash" size={20} color={colors.secondary} />
                         </View>
                         <Text style={styles.summaryValue}>{stats.totalSessions}</Text>
                         <Text style={styles.summaryLabel}>Sessions</Text>
                     </Card>
-                    <Card style={styles.summaryCard} variant="solid">
-                        <LinearGradient colors={['rgba(16, 185, 129, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
+                    <Card style={styles.summaryCard} variant="glass">
                         <View style={[styles.summaryIcon, { backgroundColor: colors.success + '15' }]}>
                             <Ionicons name="analytics" size={20} color={colors.success} />
                         </View>
@@ -267,177 +248,101 @@ export const StatsScreen = () => {
                     </Card>
                 </View>
 
-                {/* Study Momentum Heatmap */}
                 <MomentumHeatmap
                     data={stats.dailyStats.map(d => ({ date: d.date, count: d.totalStudyTime }))}
                     color={colors.primary}
                 />
 
-                {/* Unlockable Auras */}
                 <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
                     <Text style={styles.sectionTitle}>Unlockable Auras</Text>
                     <Text style={styles.sectionSub}>CUSTOMIZE YOUR AMBIENCE</Text>
                 </View>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.auraScroll}
-                    contentContainerStyle={styles.auraContainer}
-                >
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.auraScroll} contentContainerStyle={styles.auraContainer}>
                     {AURAS.map((aura) => {
                         const isUnlocked = checkAuraUnlock(aura.id, stats);
                         const isActive = activeAura.id === aura.id;
-
                         return (
                             <TouchableOpacity
                                 key={aura.id}
-                                style={[
-                                    styles.auraCard,
-                                    isActive && { borderColor: colors.primary, borderWidth: 2 }
-                                ]}
-                                onPress={() => isUnlocked && setAura(aura.id)}
-                                activeOpacity={isUnlocked ? 0.7 : 1}
+                                style={[styles.auraCard, isActive && { borderColor: colors.primary, borderWidth: 2 }]}
+                                onPress={() => {
+                                    if (!isUnlocked) return;
+                                    if (aura.isPremium && !isPro) {
+                                        Alert.alert('Premium Aura', `The ${aura.name} is a Pro feature.`, [
+                                            { text: 'Not Now' },
+                                            { text: 'Upgrade to Pro', onPress: togglePro }
+                                        ]);
+                                        return;
+                                    }
+                                    setAura(aura.id);
+                                }}
                             >
-                                <LinearGradient
-                                    colors={aura.gradients}
-                                    style={styles.auraPreview}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    {!isUnlocked && (
-                                        <View style={styles.lockOverlay}>
-                                            <Ionicons name="lock-closed" size={24} color="#FFF" />
-                                        </View>
-                                    )}
+                                <LinearGradient colors={aura.gradients} style={styles.auraPreview}>
+                                    {!isUnlocked && !aura.isPremium && <Ionicons name="lock-closed" size={20} color="#FFF" />}
+                                    {aura.isPremium && <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>}
                                 </LinearGradient>
                                 <View style={styles.auraInfo}>
                                     <Text style={styles.auraName}>{aura.name}</Text>
-                                    <Text style={styles.auraCriteria} numberOfLines={2}>
-                                        {isUnlocked ? 'Unlocked' : aura.description}
-                                    </Text>
+                                    <Text style={styles.auraCriteria} numberOfLines={1}>{aura.isPremium && !isPro ? 'PRO ACCESS' : (isUnlocked ? 'Unlocked' : aura.description)}</Text>
                                 </View>
                             </TouchableOpacity>
                         );
                     })}
                 </ScrollView>
 
-                {/* Recap Section */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Momentum Recap</Text>
+                    <Text style={styles.sectionTitle}>Recap</Text>
                     <View style={styles.periodSelector}>
                         {(['day', 'week', 'month'] as PeriodType[]).map((p) => (
-                            <TouchableOpacity
-                                key={p}
-                                style={[styles.periodButton, period === p && styles.periodButtonActive]}
-                                onPress={() => setPeriod(p)}
-                            >
-                                <Text style={[styles.periodButtonText, period === p && styles.periodButtonTextActive]}>
-                                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                                </Text>
+                            <TouchableOpacity key={p} style={[styles.periodButton, period === p && styles.periodButtonActive]} onPress={() => setPeriod(p)}>
+                                <Text style={[styles.periodButtonText, period === p && styles.periodButtonTextActive]}>{p.toUpperCase()}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                 </View>
 
-                <Card style={styles.recapCard}>
-                    <View style={styles.recapHeader}>
-                        <View>
-                            <Text style={styles.recapValue}>{Math.floor(recapTotalMinutes)}<Text style={styles.unit}>m</Text></Text>
-                            <Text style={styles.recapLabel}>Focus Duration</Text>
-                        </View>
-                        <View style={styles.recapBadge}>
-                            <Text style={styles.recapBadgeText}>{recapSessions.length} Goals</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.completedList}>
-                        {recapSessions.length > 0 ? (
-                            recapSessions.slice(-3).map((s, idx) => {
-                                const subject = subjects.find(sub => sub.id === s.subjectId);
-                                return (
-                                    <View key={s.id || idx} style={styles.completedItem}>
-                                        <Text style={styles.completedIcon}>{subject?.icon || '📚'}</Text>
-                                        <View style={styles.completedInfo}>
-                                            <Text style={styles.completedText}>{subject?.name || 'Session'}</Text>
-                                            <Text style={styles.completedTime}>{formatTime(s.duration)} focused</Text>
-                                        </View>
-                                        <Text style={styles.completedCheck}>✅</Text>
-                                    </View>
-                                );
-                            })
-                        ) : (
-                            <Text style={styles.emptyRecap}>No goals completed in this {period}.</Text>
-                        )}
-                    </View>
+                <Card style={styles.recapCard} variant="glass">
+                    <Text style={styles.recapValue}>{Math.floor(recapTotalMinutes)}<Text style={styles.unit}>m</Text></Text>
+                    <Text style={styles.recapLabel}>Focus this {period}</Text>
                 </Card>
 
-                {/* Badges Section */}
                 <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
                     <Text style={styles.sectionTitle}>Achievements</Text>
                 </View>
-                <Card style={styles.badgesCard}>
+                <Card style={styles.badgesCard} variant="glass">
                     <View style={styles.badgesGrid}>
-                        {achievements.map(badge => (
-                            <BadgeItem key={badge.id} badge={badge} />
-                        ))}
+                        {achievements.map(badge => <BadgeItem key={badge.id} badge={badge} />)}
                     </View>
                 </Card>
 
-                {/* Weekly Trend Chart */}
                 <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Performance Trend</Text>
-                    <Text style={styles.sectionSub}>Last 7 Days (min)</Text>
+                    <Text style={styles.sectionTitle}>Trend</Text>
+                    <Text style={styles.sectionSub}>LAST 7 DAYS (min)</Text>
                 </View>
-                {(lineData.labels.length > 0 && lineData.datasets[0].data.length > 0) ? (
-                    <Card style={styles.chartCard} variant="solid">
-                        <BarChart
-                            data={lineData}
-                            width={Dimensions.get('window').width - spacing.lg * 4}
-                            height={220}
-                            yAxisLabel=""
-                            yAxisSuffix="m"
-                            chartConfig={chartConfig}
-                            style={styles.chart}
-                            fromZero
-                            showValuesOnTopOfBars={false}
-                            flatColor={true}
-                            withInnerLines={false}
-                        />
-                    </Card>
-                ) : (
-                    <Card style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>No study data for the last 7 days.</Text>
-                    </Card>
-                )}
-
-                {/* Subject Distribution */}
-                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Focus Allocation</Text>
-                    <Text style={styles.sectionSub}>{period.toUpperCase()} TOTAL</Text>
-                </View>
-                <Card style={styles.chartCardPie} variant="solid">
-                    {pieData.length > 0 ? (
-                        <DonutChart
-                            data={pieData}
-                            centerValue={`${Math.floor(recapTotalMinutes / 60)}h`}
-                            centerLabel="Focused"
-                            size={160}
-                            strokeWidth={15}
-                        />
-                    ) : (
-                        <Text style={styles.emptyChart}>Start studying to see distribution.</Text>
-                    )}
+                <Card style={styles.chartCard} variant="glass">
+                    <BarChart
+                        data={lineData}
+                        width={width - spacing.lg * 4}
+                        height={200}
+                        chartConfig={chartConfig}
+                        style={styles.chart}
+                        fromZero
+                        withInnerLines={false}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                    />
                 </Card>
 
-                {/* Streak Banner */}
+                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
+                    <Text style={styles.sectionTitle}>Focus Allocation</Text>
+                </View>
+                <Card style={styles.chartCardPie} variant="glass">
+                    <DonutChart data={pieData} centerValue={`${Math.floor(recapTotalMinutes / 60)}h`} centerLabel="Focused" size={160} strokeWidth={15} />
+                </Card>
+
                 <Card style={styles.streakCard}>
-                    <LinearGradient
-                        colors={['rgba(34, 211, 238, 0.1)', 'rgba(139, 92, 246, 0.1)'] as any}
-                        style={styles.streakGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <View style={styles.streakInfo}>
+                    <LinearGradient colors={['rgba(34, 211, 238, 0.1)', 'rgba(139, 92, 246, 0.1)'] as any} style={styles.streakGradient}>
+                        <View>
                             <Text style={styles.streakTitle}>Academic Streak</Text>
                             <Text style={styles.streakSubtitle}>Keep up the consistency!</Text>
                         </View>
@@ -448,6 +353,13 @@ export const StatsScreen = () => {
                     </LinearGradient>
                 </Card>
 
+                <TouchableOpacity style={[styles.proToggle, { backgroundColor: isPro ? colors.success + '20' : colors.primary + '20' }]} onPress={togglePro}>
+                    <Ionicons name={isPro ? "star" : "star-outline"} size={20} color={isPro ? colors.success : colors.primary} />
+                    <Text style={[styles.proToggleText, { color: isPro ? colors.success : colors.primary }]}>
+                        {isPro ? "PRO ACCOUNT ACTIVE" : "UPGRADE TO PRO (TEST)"}
+                    </Text>
+                </TouchableOpacity>
+
                 <View style={{ height: 120 }} />
             </ScrollView>
         </View>
@@ -455,343 +367,57 @@ export const StatsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
-        paddingHorizontal: spacing.lg,
-        marginBottom: spacing.xl,
-    },
-    title: {
-        ...typography.h1,
-        color: colors.text,
-    },
-    shareButton: {
-        backgroundColor: colors.primary + '20',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: borderRadius.full,
-        borderWidth: 1,
-        borderColor: colors.primary + '30',
-    },
-    shareText: {
-        ...typography.caption,
-        color: colors.primary,
-        fontWeight: '700' as any,
-    },
-    scrollContent: {
-        flex: 1,
-        paddingHorizontal: spacing.lg,
-    },
-    summaryGrid: {
-        flexDirection: 'row',
-        gap: spacing.md,
-        marginBottom: spacing.xl,
-    },
-    summaryCard: {
-        flex: 1,
-        padding: spacing.md,
-        alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
-    },
-    summaryIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    summaryEmoji: {
-        fontSize: 18,
-    },
-    summaryValue: {
-        ...typography.h2,
-        color: colors.text,
-        marginBottom: 2,
-    },
-    summaryLabel: {
-        ...typography.tiny,
-        color: colors.textSecondary,
-        textAlign: 'center',
-    },
-    unit: {
-        fontSize: 14,
-        color: colors.primary,
-        fontWeight: '600' as any,
-    },
-    sectionHeader: {
-        marginBottom: spacing.md,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    sectionTitle: {
-        ...typography.h3,
-        color: colors.text,
-        letterSpacing: 0.5,
-    },
-    sectionSub: {
-        ...typography.caption,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    periodSelector: {
-        flexDirection: 'row',
-        backgroundColor: colors.backgroundTertiary,
-        borderRadius: borderRadius.lg,
-        padding: 2,
-    },
-    periodButton: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: borderRadius.md,
-    },
-    periodButtonActive: {
-        backgroundColor: colors.backgroundSecondary,
-    },
-    periodButtonText: {
-        ...typography.tiny,
-        color: colors.textSecondary,
-    },
-    periodButtonTextActive: {
-        color: colors.primary,
-        fontWeight: '700' as any,
-    },
-    recapCard: {
-        backgroundColor: colors.backgroundSecondary,
-        padding: spacing.lg,
-    },
-    recapHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: spacing.lg,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        paddingBottom: spacing.md,
-    },
-    recapValue: {
-        ...typography.h1,
-        color: colors.text,
-        lineHeight: 32,
-    },
-    recapLabel: {
-        ...typography.tiny,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    recapBadge: {
-        backgroundColor: colors.success + '20',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: borderRadius.full,
-    },
-    recapBadgeText: {
-        ...typography.tiny,
-        color: colors.success,
-        fontWeight: '700' as any,
-    },
-    completedList: {
-        gap: spacing.md,
-    },
-    completedItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.md,
-    },
-    completedIcon: {
-        fontSize: 24,
-    },
-    completedInfo: {
-        flex: 1,
-    },
-    completedText: {
-        ...typography.body,
-        fontWeight: '600' as any,
-        color: colors.text,
-    },
-    completedTime: {
-        ...typography.tiny,
-        color: colors.textSecondary,
-    },
-    completedCheck: {
-        fontSize: 16,
-    },
-    emptyRecap: {
-        ...typography.body,
-        color: colors.textMuted,
-        textAlign: 'center',
-        paddingVertical: spacing.md,
-    },
-    badgesCard: {
-        backgroundColor: colors.backgroundSecondary,
-        padding: spacing.lg,
-    },
-    badgesGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-    },
-    chartCard: {
-        marginTop: spacing.sm,
-        padding: spacing.md,
-        alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
-        borderRadius: borderRadius.lg,
-    },
-    chart: {
-        marginVertical: 8,
-        borderRadius: 16,
-    },
-    chartCardPie: {
-        marginBottom: spacing.sm,
-        padding: 0,
-        alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
-    },
-    emptyChart: {
-        ...typography.body,
-        color: colors.textMuted,
-        paddingVertical: 60,
-    },
-    emptyCard: {
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyText: {
-        ...typography.body,
-        color: colors.textMuted,
-    },
-    streakCard: {
-        padding: 0,
-        borderRadius: borderRadius.xl,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.primary + '20',
-        marginBottom: spacing.xl,
-    },
-    streakGradient: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: spacing.xl,
-    },
-    streakInfo: {
-        flex: 1,
-    },
-    streakTitle: {
-        ...typography.h2,
-        color: colors.primary,
-    },
-    streakSubtitle: {
-        ...typography.caption,
-        color: colors.textSecondary,
-        marginTop: 4,
-    },
-    streakCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: colors.primary + '10',
-        borderWidth: 2,
-        borderColor: colors.primary + '30',
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...shadows.glow,
-    },
-    streakValue: {
-        fontSize: 32,
-        fontWeight: '900' as any,
-        color: colors.primary,
-        lineHeight: 36,
-    },
-    streakLabel: {
-        fontSize: 10,
-        fontWeight: '800' as any,
-        color: colors.primary,
-        opacity: 0.8,
-    },
-    migrationCard: {
-        marginBottom: spacing.xl,
-        backgroundColor: colors.primary + '10',
-        borderColor: colors.primary + '30',
-        borderWidth: 1,
-        padding: spacing.lg,
-    },
-    migrationInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: spacing.md,
-    },
-    migrationEmoji: {
-        fontSize: 32,
-        marginRight: spacing.md,
-    },
-    migrationTitle: {
-        ...typography.h3,
-        color: colors.primary,
-    },
-    migrationSubtitle: {
-        ...typography.caption,
-        color: colors.textSecondary,
-    },
-    migrationButton: {
-        backgroundColor: colors.primary,
-        paddingVertical: spacing.md,
-        borderRadius: borderRadius.md,
-        alignItems: 'center',
-    },
-    migrationButtonText: {
-        ...typography.body,
-        fontWeight: 'bold' as any,
-        color: colors.background,
-    },
-    auraScroll: {
-        marginHorizontal: -spacing.lg,
-        paddingHorizontal: spacing.lg,
-        marginBottom: spacing.xl,
-    },
-    auraContainer: {
-        paddingRight: spacing.xxl,
-        gap: spacing.md,
-        flexDirection: 'row',
-    },
-    auraCard: {
-        width: 140,
-        backgroundColor: colors.backgroundSecondary,
-        borderRadius: borderRadius.lg,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    auraPreview: {
-        height: 80,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    lockOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    auraInfo: {
-        padding: spacing.sm,
-    },
-    auraName: {
-        ...typography.small,
-        fontWeight: 'bold' as any,
-        color: colors.text,
-    },
-    auraCriteria: {
-        ...typography.tiny,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
+    container: { flex: 1, backgroundColor: colors.background },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
+    title: { ...typography.h1, color: colors.text },
+    shareButton: { backgroundColor: colors.primary + '10', paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.full },
+    shareText: { ...typography.caption, color: colors.primary, fontWeight: '700' as any },
+    scrollContent: { paddingHorizontal: spacing.lg },
+    summaryGrid: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+    summaryCard: { flex: 1, padding: spacing.md, alignItems: 'center' },
+    summaryIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    summaryValue: { ...typography.h2, color: colors.text },
+    summaryLabel: { ...typography.tiny, color: colors.textSecondary },
+    unit: { fontSize: 14, color: colors.primary },
+    sectionHeader: { marginBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    sectionTitle: { ...typography.h3, color: colors.text },
+    sectionSub: { ...typography.tiny, color: colors.textSecondary },
+    auraScroll: { marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
+    auraContainer: { gap: spacing.md, flexDirection: 'row', paddingRight: spacing.xl },
+    auraCard: { width: 140, borderRadius: borderRadius.lg, backgroundColor: colors.backgroundSecondary, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+    auraPreview: { height: 80, justifyContent: 'center', alignItems: 'center' },
+    auraInfo: { padding: spacing.sm },
+    auraName: { ...typography.body, fontWeight: '700' as any, color: colors.text },
+    auraCriteria: { fontSize: 10, color: colors.textSecondary },
+    periodSelector: { flexDirection: 'row', backgroundColor: colors.backgroundTertiary, borderRadius: borderRadius.md, padding: 2 },
+    periodButton: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+    periodButtonActive: { backgroundColor: colors.backgroundSecondary },
+    periodButtonText: { fontSize: 10, color: colors.textSecondary },
+    periodButtonTextActive: { color: colors.primary, fontWeight: '700' as any },
+    recapCard: { padding: spacing.lg, alignItems: 'center' },
+    recapValue: { ...typography.h1, color: colors.text },
+    recapLabel: { ...typography.caption, color: colors.textSecondary },
+    badgesCard: { padding: spacing.lg },
+    badgesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
+    chartCard: { padding: spacing.md, alignItems: 'center' },
+    chart: { marginVertical: 8, borderRadius: 16 },
+    chartCardPie: { padding: spacing.xl, alignItems: 'center' },
+    streakCard: { marginTop: spacing.xl, borderRadius: borderRadius.xl, overflow: 'hidden' },
+    streakGradient: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.xl },
+    streakTitle: { ...typography.h2, color: colors.primary },
+    streakSubtitle: { ...typography.tiny, color: colors.textSecondary },
+    streakCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.primary + '10', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.primary + '30' },
+    streakValue: { fontSize: 28, fontWeight: '900' as any, color: colors.primary },
+    streakLabel: { fontSize: 9, fontWeight: '700' as any, color: colors.primary },
+    proBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.primary, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
+    proBadgeText: { color: '#000', fontSize: 8, fontWeight: '900' as any },
+    proToggle: { marginTop: spacing.xl, padding: 16, borderRadius: borderRadius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primary + '30' },
+    proToggleText: { fontSize: 12, fontWeight: '700' as any, letterSpacing: 1 },
+    migrationCard: { marginBottom: spacing.md, padding: spacing.md, backgroundColor: colors.primary + '05' },
+    migrationInfo: { flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.sm },
+    migrationEmoji: { fontSize: 24 },
+    migrationTitle: { ...typography.body, fontWeight: '700' as any, color: colors.primary },
+    migrationSubtitle: { ...typography.tiny, color: colors.textSecondary },
+    migrationButton: { backgroundColor: colors.primary, padding: spacing.sm, borderRadius: borderRadius.md, alignItems: 'center' },
+    migrationButtonText: { color: colors.background, fontWeight: '700' as any },
 });

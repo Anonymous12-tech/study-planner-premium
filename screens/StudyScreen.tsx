@@ -12,6 +12,7 @@ import {
     ScrollView,
     Dimensions
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
@@ -28,6 +29,7 @@ import {
 import { getTodayDateString } from '../utils/calculations';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { Card } from '../components/ui/Card';
 
 
 const { width, height } = Dimensions.get('window');
@@ -266,7 +268,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
 
             {/* Ambient Background Glow */}
             {activeSession && !activeSession.isPaused && (
@@ -285,14 +287,15 @@ export const StudyScreen = ({ route, navigation }: any) => {
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
                         <Ionicons name="close" size={24} color={colors.textSecondary} />
                     </TouchableOpacity>
 
                     {activeSession && (
-                        <View style={styles.liveIndicator}>
+                        <BlurView intensity={30} tint="dark" style={[styles.liveIndicator, { borderColor: activeSession.isPaused ? colors.error + '40' : colors.primary + '40' }]}>
                             <View style={[styles.liveDot, { backgroundColor: activeSession.isPaused ? colors.error : colors.primary }]} />
                             <Text style={styles.liveText}>{activeSession.isPaused ? 'PAUSED' : 'LIVE FOCUS'}</Text>
-                        </View>
+                        </BlurView>
                     )}
 
                     <TouchableOpacity
@@ -302,6 +305,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
                             Haptics.selectionAsync();
                         }}
                     >
+                        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
                         <Ionicons name={isAmbientOn ? "volume-high" : "volume-mute"} size={20} color={isAmbientOn ? colors.primary : colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
@@ -319,49 +323,37 @@ export const StudyScreen = ({ route, navigation }: any) => {
                             showsVerticalScrollIndicator={false}
                         >
                             {subjects && subjects.map(subject => (
-                                <TouchableOpacity
+                                <Card
                                     key={subject.id}
+                                    variant="glass"
+                                    padding="none"
                                     style={[
                                         styles.subjectCard,
-                                        selectedSubject?.id === subject.id && { borderColor: subject.color, backgroundColor: subject.color + '15' }
+                                        selectedSubject?.id === subject.id && { borderColor: subject.color }
                                     ]}
-                                    onPress={() => {
-                                        setSelectedSubject(subject);
-                                        Haptics.selectionAsync();
-                                    }}
-                                    activeOpacity={0.7}
                                 >
-                                    <View style={[styles.subjectIconBox, { backgroundColor: subject.color + '20' }]}>
-                                        <Text style={{ fontSize: 24 }}>{subject.icon}</Text>
-                                    </View>
-                                    <View style={styles.subjectInfo}>
-                                        <Text style={styles.subjectName}>{subject.name}</Text>
-                                        <Text style={styles.subjectStats}>{Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m focused</Text>
-                                    </View>
-                                    {selectedSubject?.id === subject.id && (
-                                        <Ionicons name="checkmark-circle" size={24} color={subject.color} />
-                                    )}
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setSelectedSubject(subject);
+                                            Haptics.selectionAsync();
+                                        }}
+                                        activeOpacity={0.7}
+                                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', padding: spacing.md }}
+                                    >
+                                        <View style={[styles.subjectIconBox, { backgroundColor: subject.color + '20' }]}>
+                                            <Text style={{ fontSize: 24 }}>{subject.icon}</Text>
+                                        </View>
+                                        <View style={styles.subjectInfo}>
+                                            <Text style={styles.subjectName}>{subject.name}</Text>
+                                            <Text style={styles.subjectStats}>{Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m focused</Text>
+                                        </View>
+                                        {selectedSubject?.id === subject.id && (
+                                            <Ionicons name="checkmark-circle" size={24} color={subject.color} />
+                                        )}
+                                    </TouchableOpacity>
+                                </Card>
                             ))}
                         </ScrollView>
-
-                        <View style={styles.footerContainer}>
-                            <TouchableOpacity
-                                style={[styles.startBtn, !selectedSubject && styles.startBtnDisabled]}
-                                onPress={handleStart}
-                                disabled={!selectedSubject}
-                            >
-                                <LinearGradient
-                                    colors={selectedSubject ? [selectedSubject.color, colors.secondary] : [colors.border, colors.border]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.startBtnGradient}
-                                >
-                                    <Text style={styles.startBtnText}>BEGIN SESSION</Text>
-                                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </View>
                     </Animated.View>
                 ) : (
                     <View style={styles.focusView}>
@@ -410,6 +402,26 @@ export const StudyScreen = ({ route, navigation }: any) => {
                     </View>
                 )}
             </View>
+
+            {!activeSession && (
+                <View style={styles.footerContainer}>
+                    <TouchableOpacity
+                        style={[styles.startBtn, !selectedSubject && styles.startBtnDisabled]}
+                        onPress={handleStart}
+                        disabled={!selectedSubject}
+                    >
+                        <LinearGradient
+                            colors={selectedSubject ? gradients.primary as any : [colors.border, colors.border]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.startBtnGradient}
+                        >
+                            <Text style={styles.startBtnText}>BEGIN SESSION</Text>
+                            <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 };
@@ -441,14 +453,14 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     headerButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: baseColors.backgroundSecondary,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        overflow: 'hidden',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: baseColors.border,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     headerButtonActive: {
         // Dynamic mapping in JSX
@@ -456,12 +468,11 @@ const styles = StyleSheet.create({
     liveIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: baseColors.backgroundSecondary,
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 100,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#333',
+        overflow: 'hidden',
     },
     liveDot: {
         width: 6,
@@ -470,9 +481,9 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     liveText: {
+        ...typography.tiny,
         color: baseColors.textSecondary,
-        fontSize: 10,
-        fontWeight: '700',
+        textTransform: 'uppercase',
         letterSpacing: 1,
     },
 
@@ -484,28 +495,20 @@ const styles = StyleSheet.create({
         marginBottom: spacing.lg,
     },
     setupTitle: {
-        fontSize: 32,
-        fontWeight: '300',
+        ...typography.h1,
         color: baseColors.text,
-        letterSpacing: -0.5,
     },
     setupSubtitle: {
-        fontSize: 14,
+        ...typography.caption,
         color: baseColors.textSecondary,
         marginTop: 4,
     },
     subjectList: {
-        paddingBottom: 100,
+        paddingBottom: 150, // Added extra padding to clear footer and tab bar
     },
     subjectCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: baseColors.backgroundTertiary,
-        padding: spacing.md,
-        borderRadius: borderRadius.xl,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#222',
+        overflow: 'hidden',
     },
     subjectIconBox: {
         width: 50,
@@ -519,20 +522,20 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     subjectName: {
-        fontSize: 16,
-        fontWeight: '600',
+        ...typography.body,
+        fontWeight: '600' as any,
         color: baseColors.text,
         marginBottom: 2,
     },
     subjectStats: {
-        fontSize: 12,
+        ...typography.small,
         color: baseColors.textSecondary,
     },
     footerContainer: {
         position: 'absolute',
-        bottom: 40,
-        left: 0,
-        right: 0,
+        bottom: 110, // Increased to clear the tab bar height (88) + some margin
+        left: spacing.lg,
+        right: spacing.lg,
         alignItems: 'center',
     },
     startBtn: {
@@ -552,10 +555,11 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     startBtnText: {
-        fontSize: 16,
-        fontWeight: '700',
+        ...typography.body,
+        fontWeight: '700' as any,
         color: '#FFFFFF',
         letterSpacing: 1,
+        textTransform: 'uppercase',
     },
 
     // Focus View
@@ -573,14 +577,15 @@ const styles = StyleSheet.create({
         fontWeight: '200',
         fontVariant: ['tabular-nums'],
         letterSpacing: -2,
+        color: '#FFFFFF',
     },
     focusContext: {
-        fontSize: 16,
+        ...typography.body,
         color: baseColors.textSecondary,
         letterSpacing: 0.5,
-        marginTop: 0,
-        fontWeight: '500',
+        marginTop: 8,
     },
+
 
     // Controls
     controlsContainer: {
@@ -605,9 +610,8 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     ctrlLabel: {
-        fontSize: 10,
+        ...typography.tiny,
         color: baseColors.textSecondary,
-        fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 1,
     },

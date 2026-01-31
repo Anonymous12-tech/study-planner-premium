@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, View, ActivityIndicator, Platform } from 'react-native';
+import { Text, View, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { colors as baseColors, spacing, borderRadius } from '../constants/theme'; // Renamed to avoid conflict
 import { useTheme } from '../context/ThemeContext'; // Added useTheme import
 import { HomeScreen } from '../screens/HomeScreen';
@@ -63,7 +64,7 @@ const MainTabs = () => {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)', // Slightly translucent backgroundSecondary
+                    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(15, 23, 42, 0.95)',
                     borderTopColor: 'rgba(255, 255, 255, 0.05)',
                     borderTopWidth: 1,
                     paddingBottom: spacing.sm,
@@ -75,7 +76,17 @@ const MainTabs = () => {
                     right: 0,
                     elevation: 0,
                     shadowOpacity: 0,
+                    overflow: 'hidden',
                 },
+                tabBarBackground: () => (
+                    Platform.OS === 'ios' ? (
+                        <BlurView
+                            tint="dark"
+                            intensity={80}
+                            style={StyleSheet.absoluteFill}
+                        />
+                    ) : null
+                ),
                 tabBarActiveTintColor: colors.primary,
                 tabBarInactiveTintColor: colors.textTertiary,
                 tabBarLabelStyle: {

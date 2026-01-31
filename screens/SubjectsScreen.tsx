@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Subject } from '../types';
 import { getSubjects, addSubject, deleteSubject, updateSubject, getSessions } from '../utils/storage';
 import * as Haptics from 'expo-haptics';
@@ -30,42 +31,48 @@ const { width } = Dimensions.get('window');
 const SubjectGridCard = ({ subject, sessionsCount, onPress, onEdit, onDelete }: any) => {
     const { colors } = useTheme();
     return (
-        <TouchableOpacity
+        <Card
+            variant="glass"
+            padding="none"
             style={[styles.card, { borderColor: subject.color + '40' }]}
-            onPress={onPress}
-            activeOpacity={0.8}
         >
-            <LinearGradient
-                colors={[subject.color + '15', subject.color + '05']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.cardGradient}
-            />
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.8}
+                style={{ flex: 1, padding: 15 }}
+            >
+                <LinearGradient
+                    colors={[subject.color + '15', subject.color + '05']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.cardGradient}
+                />
 
-            <View style={styles.cardHeader}>
-                <View style={[styles.iconBox, { backgroundColor: subject.color + '20' }]}>
-                    <Text style={styles.icon}>{subject.icon}</Text>
+                <View style={styles.cardHeader}>
+                    <View style={[styles.iconBox, { backgroundColor: subject.color + '20' }]}>
+                        <Text style={styles.icon}>{subject.icon}</Text>
+                    </View>
+                    <TouchableOpacity onPress={onEdit} style={styles.moreBtn}>
+                        <Ionicons name="ellipsis-horizontal" size={16} color={baseColors.textSecondary} />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={onEdit} style={styles.moreBtn}>
-                    <Ionicons name="ellipsis-horizontal" size={16} color={baseColors.textSecondary} />
+
+                <Text style={styles.cardTitle} numberOfLines={1}>{subject.name}</Text>
+
+                <View style={styles.cardStats}>
+                    <Text style={styles.statText}>
+                        {Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m
+                    </Text>
+                    <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{sessionsCount} sessions</Text>
+                    </View>
+                </View>
+
+                <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
+                    <Ionicons name="trash-outline" size={18} color={baseColors.textSecondary} />
                 </TouchableOpacity>
-            </View>
-
-            <Text style={styles.cardTitle} numberOfLines={1}>{subject.name}</Text>
-
-            <View style={styles.cardStats}>
-                <Text style={styles.statText}>
-                    {Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m
-                </Text>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{sessionsCount} sessions</Text>
-                </View>
-            </View>
-
-            <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-                <Ionicons name="trash-outline" size={18} color={baseColors.textSecondary} />
             </TouchableOpacity>
-        </TouchableOpacity>
+        </Card>
     );
 };
 
@@ -172,7 +179,7 @@ export const SubjectsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
 
             <View style={styles.header}>
                 <View>
@@ -233,7 +240,7 @@ export const SubjectsScreen = () => {
                             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                             style={styles.keyboardView}
                         >
-                            <View style={styles.modalContent}>
+                            <Card variant="glass" intensity={60} style={styles.modalContent}>
                                 <View style={styles.modalHeader}>
                                     <Text style={styles.modalTitle}>
                                         {editingSubject ? 'Edit Subject' : 'New Subject'}
@@ -276,7 +283,7 @@ export const SubjectsScreen = () => {
                                     onPress={handleSaveSubject}
                                     style={[styles.saveButton, { backgroundColor: colors.primary }]}
                                 />
-                            </View>
+                            </Card>
                         </KeyboardAvoidingView>
                     </View>
                 </TouchableWithoutFeedback>
@@ -330,11 +337,8 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     card: {
-        backgroundColor: baseColors.backgroundSecondary,
         borderRadius: 20,
         height: 160,
-        padding: 15,
-        justifyContent: 'space-between',
         borderWidth: 1,
         borderColor: baseColors.border,
         overflow: 'hidden',
@@ -444,11 +448,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     modalContent: {
-        backgroundColor: baseColors.backgroundSecondary,
         borderRadius: 24,
-        padding: 25,
-        borderWidth: 1,
-        borderColor: baseColors.border,
         width: '100%',
     },
     modalHeader: {

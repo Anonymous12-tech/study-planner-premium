@@ -111,7 +111,7 @@ export const HomeScreen = ({ navigation }: any) => {
     return (
         <View style={styles.container}>
             <LinearGradient
-                colors={gradients.dark as any}
+                colors={gradients.aura as any}
                 style={StyleSheet.absoluteFill}
             />
 
@@ -143,7 +143,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 {chartData && chartData.labels.length > 0 && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Weekly Activity</Text>
-                        <Card style={styles.chartCard}>
+                        <Card style={styles.chartCard} variant="glass">
                             <BarChart
                                 data={chartData}
                                 width={Dimensions.get('window').width - spacing.lg * 4}
@@ -186,22 +186,24 @@ export const HomeScreen = ({ navigation }: any) => {
 
                     {(tasks && tasks.length > 0) ? (
                         (tasks || []).map(task => (
-                            <TouchableOpacity
-                                key={task.id}
-                                style={[styles.taskCard, task.isCompleted && styles.taskCardCompleted]}
-                                onPress={() => toggleTask(task)}
-                            >
-                                <View style={styles.taskInfo}>
-                                    <View style={[styles.priorityIndicator, { backgroundColor: task.priority === 'high' ? colors.error : colors.primary }]} />
-                                    <View>
-                                        <Text style={[styles.taskTopic, task.isCompleted && styles.textCompleted]}>{task.topic}</Text>
-                                        <Text style={styles.taskMeta}>{task.plannedDuration} min • {task.priority} priority</Text>
+                            <Card key={task.id} variant="glass" padding="none" style={[styles.taskCard, task.isCompleted && styles.taskCardCompleted]}>
+                                <TouchableOpacity
+                                    onPress={() => toggleTask(task)}
+                                    activeOpacity={0.7}
+                                    style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg }}
+                                >
+                                    <View style={styles.taskInfo}>
+                                        <View style={[styles.priorityIndicator, { backgroundColor: task.priority === 'high' ? colors.error : colors.primary }]} />
+                                        <View>
+                                            <Text style={[styles.taskTopic, task.isCompleted && styles.textCompleted]}>{task.topic}</Text>
+                                            <Text style={styles.taskMeta}>{task.plannedDuration} min • {task.priority} priority</Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <View style={[styles.checkbox, task.isCompleted && styles.checkboxChecked]}>
-                                    {task.isCompleted && <Ionicons name="checkmark" size={14} color={colors.background} />}
-                                </View>
-                            </TouchableOpacity>
+                                    <View style={[styles.checkbox, { borderColor: colors.primary }, task.isCompleted && { backgroundColor: colors.primary }]}>
+                                        {task.isCompleted && <Ionicons name="checkmark" size={14} color={colors.background} />}
+                                    </View>
+                                </TouchableOpacity>
+                            </Card>
                         ))
                     ) : (
                         <Card style={styles.emptyCard}>
@@ -303,15 +305,7 @@ const styles = StyleSheet.create({
         fontWeight: '600' as any,
     },
     taskCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: baseColors.backgroundSecondary,
-        padding: spacing.lg,
-        borderRadius: borderRadius.lg,
         marginBottom: spacing.md,
-        borderWidth: 1,
-        borderColor: baseColors.border,
     },
     taskCardCompleted: {
         opacity: 0.6,

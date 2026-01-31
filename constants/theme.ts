@@ -9,6 +9,7 @@ export interface Aura {
         value: number;
     };
     description: string;
+    isPremium?: boolean;
 }
 
 export const AURAS: Aura[] = [
@@ -56,6 +57,36 @@ export const AURAS: Aura[] = [
         gradients: ['#E879F9', '#A855F7'],
         unlockCriteria: { type: 'streak', value: 14 },
         description: 'Unlocks after a 14-day streak.',
+    },
+    {
+        id: 'cyberpunk',
+        name: 'Cyberpunk Edge',
+        primary: '#F0ABFC', // Fuchsia 300
+        secondary: '#A21CAF', // Fuchsia 700
+        gradients: ['#F0ABFC', '#A21CAF'],
+        unlockCriteria: { type: 'hours', value: 0 },
+        description: 'Premium neon aesthetic for night owls.',
+        isPremium: true,
+    },
+    {
+        id: 'sakura',
+        name: 'Sakura Zen',
+        primary: '#FDA4AF', // Rose 300
+        secondary: '#E11D48', // Rose 600
+        gradients: ['#FECDD3', '#FDA4AF'],
+        unlockCriteria: { type: 'streak', value: 0 },
+        description: 'Calm and minimalist premium theme.',
+        isPremium: true,
+    },
+    {
+        id: 'oceanic',
+        name: 'Oceanic Depth',
+        primary: '#38BDF8', // Sky 400
+        secondary: '#1E40AF', // Blue 800
+        gradients: ['#7DD3FC', '#38BDF8'],
+        unlockCriteria: { type: 'sessions', value: 0 },
+        description: 'Deep blue immersion for focused work.',
+        isPremium: true,
     },
 ];
 
@@ -113,6 +144,7 @@ export const colors = {
 };
 
 export const spacing = {
+    none: 0,
     xs: 4,
     sm: 8,
     md: 16,
