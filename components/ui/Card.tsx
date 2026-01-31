@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import { colors, borderRadius, spacing, glassmorphism } from '../../constants/theme';
+import { colors as baseColors, borderRadius, spacing, glassmorphism } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CardProps {
     children: ReactNode;
@@ -15,11 +16,16 @@ export const Card: React.FC<CardProps> = ({
     variant = 'glass',
     padding = 'md',
 }) => {
+    const { colors } = useTheme();
     return (
         <View
             style={[
                 styles.card,
-                variant === 'glass' ? styles.glass : styles.solid,
+                variant === 'glass' ? styles.glass : {
+                    backgroundColor: baseColors.backgroundSecondary,
+                    borderWidth: 1,
+                    borderColor: baseColors.borderLight,
+                },
                 { padding: spacing[padding] },
                 style,
             ]}
@@ -38,8 +44,6 @@ const styles = StyleSheet.create({
         ...glassmorphism.medium,
     },
     solid: {
-        backgroundColor: colors.backgroundSecondary,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        // Dynamic mapping in JSX
     },
 });

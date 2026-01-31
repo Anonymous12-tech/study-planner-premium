@@ -10,7 +10,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import { colors, spacing, typography, borderRadius, gradients } from '../constants/theme';
+import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -32,6 +33,7 @@ const DEFAULT_SUBJECTS = [
 ];
 
 export const OnboardingScreen = ({ navigation }: any) => {
+    const { colors, gradients } = useTheme();
     const [step, setStep] = useState(0);
     const [fullName, setFullName] = useState('');
     const [username, setUsername] = useState('');
@@ -95,7 +97,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
                         onChangeText={setUsername}
                         autoCapitalize="none"
                     />
-                    <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 4 }}>
+                    <Text style={{ color: baseColors.textSecondary, fontSize: 10, marginTop: 4 }}>
                         Available only for this account.
                     </Text>
                 </View>
@@ -124,14 +126,14 @@ export const OnboardingScreen = ({ navigation }: any) => {
                         key={type}
                         style={[
                             styles.chip,
-                            examType === type && styles.chipActive
+                            examType === type && { borderColor: colors.primary, backgroundColor: colors.primary + '10' }
                         ]}
                         onPress={() => {
                             setExamType(type);
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                     >
-                        <Text style={[styles.chipText, examType === type && styles.chipTextActive]}>{type}</Text>
+                        <Text style={[styles.chipText, examType === type && { color: colors.primary, fontWeight: '600' }]}>{type}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -158,7 +160,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
                             <Ionicons
                                 name={(isSelected ? subj.icon : `${subj.icon}-outline`) as any}
                                 size={32}
-                                color={isSelected ? subj.color : colors.textTertiary}
+                                color={isSelected ? subj.color : baseColors.textTertiary}
                                 style={{ marginBottom: spacing.sm }}
                             />
                             <Text style={[styles.subjectName, isSelected && { color: subj.color }]}>
@@ -177,7 +179,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
             <Text style={styles.subheadline}>How many minutes do you aim to study each day?</Text>
 
             <View style={styles.goalDisplay}>
-                <Text style={styles.goalValue}>{Math.floor(dailyGoal / 60)}h {dailyGoal % 60}m</Text>
+                <Text style={[styles.goalValue, { color: colors.primary }]}>{Math.floor(dailyGoal / 60)}h {dailyGoal % 60}m</Text>
                 <Text style={styles.goalLabel}>Daily Study Goal</Text>
             </View>
 
@@ -209,7 +211,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
                             key={i}
                             style={[
                                 styles.progressBar,
-                                step >= i && styles.progressBarActive,
+                                step >= i && { backgroundColor: colors.primary },
                                 { width: (width - spacing.lg * 2) / 4 - 8 }
                             ]}
                         />
@@ -239,7 +241,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: baseColors.background,
     },
     scrollContent: {
         padding: spacing.lg,
@@ -252,28 +254,28 @@ const styles = StyleSheet.create({
     },
     progressBar: {
         height: 4,
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         borderRadius: 2,
     },
     progressBarActive: {
-        backgroundColor: colors.primary,
+        // Dynamic mapping in JSX
     },
     stepContainer: {
         flex: 1,
     },
     headline: {
         ...typography.h1,
-        color: colors.text,
+        color: baseColors.text,
         marginBottom: spacing.sm,
     },
     subheadline: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginBottom: spacing.xxl,
     },
     label: {
         ...typography.h3,
-        color: colors.text,
+        color: baseColors.text,
         marginBottom: spacing.md,
     },
     chipGrid: {
@@ -285,21 +287,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.md,
         borderRadius: borderRadius.md,
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         borderWidth: 1,
         borderColor: 'transparent',
     },
     chipActive: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primary + '10',
+        // Dynamic mapping in JSX
     },
     chipText: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     chipTextActive: {
-        color: colors.primary,
-        fontWeight: '600' as any,
+        // Dynamic mapping in JSX
     },
     subjectGrid: {
         flexDirection: 'row',
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
         width: (width - spacing.lg * 2 - spacing.md) / 2,
         padding: spacing.lg,
         borderRadius: borderRadius.lg,
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         borderWidth: 1,
         borderColor: 'transparent',
         alignItems: 'center',
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     },
     subjectName: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         fontWeight: '600' as any,
     },
     goalDisplay: {
@@ -331,11 +331,10 @@ const styles = StyleSheet.create({
     goalValue: {
         fontSize: 48,
         fontWeight: '700' as any,
-        color: colors.primary,
     },
     goalLabel: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     slider: {
         width: '100%',

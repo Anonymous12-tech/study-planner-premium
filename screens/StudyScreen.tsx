@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
+import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { Subject, StudySession, StudyTask } from '../types';
 import {
     getSubjects,
@@ -32,6 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 
 export const StudyScreen = ({ route, navigation }: any) => {
+    const { colors, gradients } = useTheme();
     const { taskId, subjectId } = route.params || {};
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -415,7 +417,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: baseColors.background,
     },
     content: {
         flex: 1,
@@ -442,20 +444,19 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
     },
     headerButtonActive: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primary + '10',
+        // Dynamic mapping in JSX
     },
     liveIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 100,
@@ -469,7 +470,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     liveText: {
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         fontSize: 10,
         fontWeight: '700',
         letterSpacing: 1,
@@ -485,12 +486,12 @@ const styles = StyleSheet.create({
     setupTitle: {
         fontSize: 32,
         fontWeight: '300',
-        color: colors.text,
+        color: baseColors.text,
         letterSpacing: -0.5,
     },
     setupSubtitle: {
         fontSize: 14,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginTop: 4,
     },
     subjectList: {
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
     subjectCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         padding: spacing.md,
         borderRadius: borderRadius.xl,
         marginBottom: 12,
@@ -520,12 +521,12 @@ const styles = StyleSheet.create({
     subjectName: {
         fontSize: 16,
         fontWeight: '600',
-        color: colors.text,
+        color: baseColors.text,
         marginBottom: 2,
     },
     subjectStats: {
         fontSize: 12,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     footerContainer: {
         position: 'absolute',
@@ -539,14 +540,9 @@ const styles = StyleSheet.create({
         height: 56,
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
     },
     startBtnDisabled: {
         opacity: 0.5,
-        shadowOpacity: 0,
     },
     startBtnGradient: {
         flex: 1,
@@ -575,13 +571,12 @@ const styles = StyleSheet.create({
     timerText: {
         fontSize: 92,
         fontWeight: '200',
-        color: colors.text,
         fontVariant: ['tabular-nums'],
         letterSpacing: -2,
     },
     focusContext: {
         fontSize: 16,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         letterSpacing: 0.5,
         marginTop: 0,
         fontWeight: '500',
@@ -602,7 +597,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -611,9 +606,10 @@ const styles = StyleSheet.create({
     },
     ctrlLabel: {
         fontSize: 10,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         fontWeight: '600',
         textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     primaryCtrl: {
         alignItems: 'center',
@@ -623,14 +619,10 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: colors.background, // See through to glowing background somewhat if we used blur, but here solids.
+        backgroundColor: baseColors.background,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-        elevation: 10,
+        ...shadows.medium,
     },
 });

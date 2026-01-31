@@ -8,7 +8,8 @@ import {
     ViewStyle,
     StyleProp,
 } from 'react-native';
-import { colors, spacing, borderRadius, typography } from '../../constants/theme';
+import { colors as baseColors, spacing, borderRadius, typography } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface InputProps extends TextInputProps {
     label?: string;
@@ -23,6 +24,7 @@ export const Input: React.FC<InputProps> = ({
     style,
     ...props
 }) => {
+    const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
 
     return (
@@ -31,16 +33,16 @@ export const Input: React.FC<InputProps> = ({
             <TextInput
                 style={[
                     styles.input,
-                    isFocused && styles.inputFocused,
+                    isFocused && { borderColor: colors.primary },
                     error && styles.inputError,
                     style,
                 ]}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={baseColors.textMuted}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 {...props}
             />
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && <Text style={[styles.error, { color: baseColors.error }]}>{error}</Text>}
         </View>
     );
 };
@@ -51,29 +53,28 @@ const styles = StyleSheet.create({
     },
     label: {
         ...typography.caption,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginBottom: spacing.xs,
         fontWeight: '600' as '600',
     },
     input: {
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
         borderRadius: borderRadius.md,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.md,
-        color: colors.text,
+        color: baseColors.text,
         fontSize: 16,
     },
     inputFocused: {
-        borderColor: colors.primary,
+        // borderColor: colors.primary,  // Will be applied dynamically in JSX
     },
     inputError: {
-        borderColor: colors.error,
+        borderColor: baseColors.error,
     },
     error: {
         ...typography.small,
-        color: colors.error,
         marginTop: spacing.xs,
     },
 });

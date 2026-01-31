@@ -6,9 +6,11 @@ import {
     ActivityIndicator,
     ViewStyle,
     TextStyle,
+    StyleProp
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, spacing, borderRadius, typography, shadows } from '../../constants/theme';
+import { colors as baseColors, spacing, borderRadius, typography, shadows } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ButtonProps {
     title: string;
@@ -17,7 +19,7 @@ interface ButtonProps {
     size?: 'small' | 'medium' | 'large';
     disabled?: boolean;
     loading?: boolean;
-    style?: ViewStyle;
+    style?: StyleProp<ViewStyle>;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -29,6 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
     loading = false,
     style,
 }) => {
+    const { colors } = useTheme();
     const handlePress = () => {
         if (!disabled && !loading) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -36,19 +39,27 @@ export const Button: React.FC<ButtonProps> = ({
         }
     };
 
-    const buttonStyle: ViewStyle = [
+    const buttonStyle = [
         styles.button,
-        styles[variant],
+        {
+            backgroundColor: variant === 'primary' ? colors.primary :
+                variant === 'secondary' ? colors.secondary :
+                    variant === 'danger' ? baseColors.error : 'transparent',
+            borderColor: variant === 'ghost' ? baseColors.border : 'transparent',
+            borderWidth: variant === 'ghost' ? 1 : 0,
+        },
         styles[size],
         disabled && styles.disabled,
         style,
-    ] as ViewStyle;
+    ];
 
-    const textStyle: TextStyle = [
+    const textStyle = [
         styles.text,
-        styles[`${variant}Text`],
+        {
+            color: variant === 'ghost' ? colors.primary : baseColors.text,
+        },
         styles[`${size}Text`],
-    ] as TextStyle;
+    ];
 
     return (
         <TouchableOpacity
@@ -58,7 +69,7 @@ export const Button: React.FC<ButtonProps> = ({
             activeOpacity={0.7}
         >
             {loading ? (
-                <ActivityIndicator color={variant === 'ghost' ? colors.primary : colors.text} />
+                <ActivityIndicator color={variant === 'ghost' ? colors.primary : baseColors.text} />
             ) : (
                 <Text style={textStyle}>{title}</Text>
             )}
@@ -74,24 +85,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
 
-    // Variants
-    primary: {
-        backgroundColor: colors.primary,
-        ...shadows.medium,
-    },
-    secondary: {
-        backgroundColor: colors.secondary,
-        ...shadows.medium,
-    },
-    ghost: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    danger: {
-        backgroundColor: colors.error,
-        ...shadows.medium,
-    },
+    // Variant bases removed in favor of dynamic mapping above
 
     // Sizes
     small: {
@@ -111,22 +105,7 @@ const styles = StyleSheet.create({
     text: {
         fontWeight: '600' as '600',
     },
-    primaryText: {
-        color: colors.text,
-        fontSize: 16,
-    },
-    secondaryText: {
-        color: colors.text,
-        fontSize: 16,
-    },
-    ghostText: {
-        color: colors.primary,
-        fontSize: 16,
-    },
-    dangerText: {
-        color: colors.text,
-        fontSize: 16,
-    },
+    // Text bases removed in favor of dynamic mapping
 
     // Size text
     smallText: {

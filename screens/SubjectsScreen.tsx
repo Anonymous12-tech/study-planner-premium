@@ -14,7 +14,8 @@ import {
     Dimensions
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, spacing, typography, borderRadius, gradients } from '../constants/theme';
+import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -26,51 +27,55 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 // Internal Component for Masonry-like Card
-const SubjectGridCard = ({ subject, sessionsCount, onPress, onEdit, onDelete }: any) => (
-    <TouchableOpacity
-        style={[styles.card, { borderColor: subject.color + '40' }]}
-        onPress={onPress}
-        activeOpacity={0.8}
-    >
-        <LinearGradient
-            colors={[subject.color + '15', subject.color + '05']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cardGradient}
-        />
+const SubjectGridCard = ({ subject, sessionsCount, onPress, onEdit, onDelete }: any) => {
+    const { colors } = useTheme();
+    return (
+        <TouchableOpacity
+            style={[styles.card, { borderColor: subject.color + '40' }]}
+            onPress={onPress}
+            activeOpacity={0.8}
+        >
+            <LinearGradient
+                colors={[subject.color + '15', subject.color + '05']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardGradient}
+            />
 
-        <View style={styles.cardHeader}>
-            <View style={[styles.iconBox, { backgroundColor: subject.color + '20' }]}>
-                <Text style={styles.icon}>{subject.icon}</Text>
+            <View style={styles.cardHeader}>
+                <View style={[styles.iconBox, { backgroundColor: subject.color + '20' }]}>
+                    <Text style={styles.icon}>{subject.icon}</Text>
+                </View>
+                <TouchableOpacity onPress={onEdit} style={styles.moreBtn}>
+                    <Ionicons name="ellipsis-horizontal" size={16} color={baseColors.textSecondary} />
+                </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={onEdit} style={styles.moreBtn}>
-                <Ionicons name="ellipsis-horizontal" size={16} color={colors.textSecondary} />
+
+            <Text style={styles.cardTitle} numberOfLines={1}>{subject.name}</Text>
+
+            <View style={styles.cardStats}>
+                <Text style={styles.statText}>
+                    {Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m
+                </Text>
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{sessionsCount} sessions</Text>
+                </View>
+            </View>
+
+            <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
+                <Ionicons name="trash-outline" size={14} color={baseColors.textSecondary} />
             </TouchableOpacity>
-        </View>
-
-        <Text style={styles.cardTitle} numberOfLines={1}>{subject.name}</Text>
-
-        <View style={styles.cardStats}>
-            <Text style={styles.statText}>
-                {Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m
-            </Text>
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>{sessionsCount} sessions</Text>
-            </View>
-        </View>
-
-        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-            <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
         </TouchableOpacity>
-    </TouchableOpacity>
-);
+    );
+};
 
 export const SubjectsScreen = () => {
+    const { colors, gradients } = useTheme();
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
     const [newSubjectName, setNewSubjectName] = useState('');
-    const [selectedColor, setSelectedColor] = useState(colors.subjectColors[0]);
+    const [selectedColor, setSelectedColor] = useState(baseColors.subjectColors[0]);
     const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
 
     const loadData = async () => {
@@ -104,7 +109,7 @@ export const SubjectsScreen = () => {
         } else {
             setEditingSubject(null);
             setNewSubjectName('');
-            setSelectedColor(colors.subjectColors[0]);
+            setSelectedColor(baseColors.subjectColors[0]);
         }
         setModalVisible(true);
     };
@@ -140,7 +145,7 @@ export const SubjectsScreen = () => {
         }
 
         setNewSubjectName('');
-        setSelectedColor(colors.subjectColors[0]);
+        setSelectedColor(baseColors.subjectColors[0]);
         setModalVisible(false);
         setEditingSubject(null);
     };
@@ -167,7 +172,7 @@ export const SubjectsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={['#000000', '#0F1218']} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
 
             <View style={styles.header}>
                 <View>
@@ -175,10 +180,10 @@ export const SubjectsScreen = () => {
                     <Text style={styles.subtitle}>Manage your study portfolio</Text>
                 </View>
                 <TouchableOpacity
-                    style={styles.addButton}
+                    style={[styles.addButton, { backgroundColor: colors.primary }]}
                     onPress={() => handleOpenModal()}
                 >
-                    <Ionicons name="add" size={24} color={colors.background} />
+                    <Ionicons name="add" size={24} color={baseColors.background} />
                 </TouchableOpacity>
             </View>
 
@@ -207,7 +212,7 @@ export const SubjectsScreen = () => {
                         <Button
                             title="Create First Subject"
                             onPress={() => handleOpenModal()}
-                            style={{ marginTop: 20, width: 200 }}
+                            style={{ marginTop: 20, width: 220, backgroundColor: colors.primary }}
                         />
                     </View>
                 )}
@@ -234,7 +239,7 @@ export const SubjectsScreen = () => {
                                         {editingSubject ? 'Edit Subject' : 'New Subject'}
                                     </Text>
                                     <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <Ionicons name="close" size={24} color={colors.textSecondary} />
+                                        <Ionicons name="close" size={24} color={baseColors.textSecondary} />
                                     </TouchableOpacity>
                                 </View>
 
@@ -248,13 +253,13 @@ export const SubjectsScreen = () => {
 
                                 <Text style={styles.colorLabel}>Theme Color</Text>
                                 <View style={styles.colorGrid}>
-                                    {colors.subjectColors && colors.subjectColors.map(color => (
+                                    {baseColors.subjectColors && baseColors.subjectColors.map(color => (
                                         <TouchableOpacity
                                             key={color}
                                             style={[
                                                 styles.colorOption,
                                                 { backgroundColor: color },
-                                                selectedColor === color && styles.colorOptionSelected,
+                                                selectedColor === color && { borderColor: '#FFF', borderWidth: 3 },
                                             ]}
                                             onPress={() => {
                                                 setSelectedColor(color);
@@ -269,7 +274,7 @@ export const SubjectsScreen = () => {
                                 <Button
                                     title={editingSubject ? 'Save Changes' : 'Create Subject'}
                                     onPress={handleSaveSubject}
-                                    style={styles.saveButton}
+                                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
                                 />
                             </View>
                         </KeyboardAvoidingView>
@@ -283,7 +288,7 @@ export const SubjectsScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000000',
+        backgroundColor: baseColors.background,
     },
     header: {
         paddingTop: Platform.OS === 'ios' ? 70 : 40,
@@ -296,25 +301,21 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 34,
         fontWeight: '700',
-        color: colors.text,
+        color: baseColors.text,
         letterSpacing: -1,
     },
     subtitle: {
         fontSize: 14,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginTop: 4,
     },
     addButton: {
-        backgroundColor: colors.primary,
         width: 44,
         height: 44,
         borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        ...shadows.medium,
     },
     scrollContent: {
         paddingHorizontal: spacing.lg,
@@ -329,13 +330,13 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     card: {
-        backgroundColor: '#15151A',
+        backgroundColor: baseColors.backgroundSecondary,
         borderRadius: 20,
         height: 160,
         padding: 15,
         justifyContent: 'space-between',
         borderWidth: 1,
-        borderColor: '#252530',
+        borderColor: baseColors.border,
         overflow: 'hidden',
         position: 'relative',
     },
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: colors.text,
+        color: baseColors.text,
         marginBottom: 4,
     },
     cardStats: {
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
     statText: {
         fontSize: 13,
         fontWeight: '600',
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     badge: {
         backgroundColor: 'rgba(255,255,255,0.05)',
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         fontSize: 10,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
 
     // Empty State
@@ -403,23 +404,23 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#1A1A22',
+        backgroundColor: baseColors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
         borderWidth: 1,
-        borderColor: '#2A2A35',
+        borderColor: baseColors.border,
     },
     emptyTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: colors.text,
+        color: baseColors.text,
         textAlign: 'center',
         marginBottom: 8,
     },
     emptySubtitle: {
         fontSize: 14,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         textAlign: 'center',
         paddingHorizontal: 20,
         lineHeight: 20,
@@ -437,11 +438,11 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     modalContent: {
-        backgroundColor: '#15151A',
+        backgroundColor: baseColors.backgroundSecondary,
         borderRadius: 24,
         padding: 25,
         borderWidth: 1,
-        borderColor: '#252530',
+        borderColor: baseColors.border,
         width: '100%',
     },
     modalHeader: {
@@ -453,11 +454,11 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: colors.text,
+        color: baseColors.text,
     },
     colorLabel: {
         fontSize: 12,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginBottom: 10,
         marginTop: 10,
         fontWeight: '600',
@@ -477,12 +478,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    colorOptionSelected: {
-        borderWidth: 3,
-        borderColor: '#FFF',
-    },
     saveButton: {
-        backgroundColor: colors.primary,
         borderRadius: 14,
         height: 50,
     },

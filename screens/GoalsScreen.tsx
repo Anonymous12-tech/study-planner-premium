@@ -12,7 +12,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
-import { colors, spacing, typography, borderRadius, gradients } from '../constants/theme';
+import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -21,6 +22,7 @@ import { ExamDeadline } from '../types';
 import * as Haptics from 'expo-haptics';
 
 export const GoalsScreen = () => {
+    const { colors, gradients } = useTheme();
     const [deadlines, setDeadlines] = useState<ExamDeadline[]>([]);
     const [isModalVisible, setModalVisible] = useState(false);
 
@@ -103,10 +105,10 @@ export const GoalsScreen = () => {
             <View style={styles.header}>
                 <Text style={styles.title}>Deadlines</Text>
                 <TouchableOpacity
-                    style={styles.addButton}
+                    style={[styles.addButton, { backgroundColor: colors.primary }]}
                     onPress={handleOpenAdd}
                 >
-                    <Text style={styles.addButtonText}>+ Add Exam</Text>
+                    <Text style={[styles.addButtonText, { color: baseColors.background }]}>+ Add Exam</Text>
                 </TouchableOpacity>
             </View>
 
@@ -133,10 +135,10 @@ export const GoalsScreen = () => {
                                     <View style={styles.prepSection}>
                                         <View style={styles.prepHeader}>
                                             <Text style={styles.prepLabel}>Preparation Level</Text>
-                                            <Text style={styles.prepValue}>{item.preparationLevel}%</Text>
+                                            <Text style={[styles.prepValue, { color: colors.primary }]}>{item.preparationLevel}%</Text>
                                         </View>
                                         <View style={styles.progressBg}>
-                                            <View style={[styles.progressFill, { width: `${item.preparationLevel}%`, backgroundColor: item.preparationLevel > 80 ? colors.success : colors.secondary }]} />
+                                            <View style={[styles.progressFill, { width: `${item.preparationLevel}%`, backgroundColor: item.preparationLevel > 80 ? baseColors.success : colors.secondary }]} />
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -209,7 +211,7 @@ export const GoalsScreen = () => {
                                 value={prepLevel}
                                 onValueChange={setPrepLevel}
                                 minimumTrackTintColor={colors.primary}
-                                maximumTrackTintColor={colors.backgroundTertiary}
+                                maximumTrackTintColor={baseColors.backgroundTertiary}
                                 thumbTintColor={colors.primary}
                             />
                         </View>
@@ -228,7 +230,7 @@ export const GoalsScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: baseColors.background,
     },
     header: {
         flexDirection: 'row',
@@ -240,17 +242,15 @@ const styles = StyleSheet.create({
     },
     title: {
         ...typography.h1,
-        color: colors.text,
+        color: baseColors.text,
     },
     addButton: {
-        backgroundColor: colors.primary,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: borderRadius.md,
     },
     addButtonText: {
         ...typography.caption,
-        color: colors.background,
         fontWeight: '700' as any,
     },
     content: {
@@ -262,9 +262,9 @@ const styles = StyleSheet.create({
         padding: spacing.lg,
     },
     featuredCard: {
-        borderColor: colors.primary + '40',
+        // Dynamic border color applied in JSX
         borderWidth: 2,
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -275,31 +275,31 @@ const styles = StyleSheet.create({
     deadlineName: {
         ...typography.h2,
         fontSize: 22,
-        color: colors.text,
+        color: baseColors.text,
         marginBottom: 4,
     },
     deadlineDate: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     daysBadge: {
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         width: 60,
         height: 60,
         borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
     },
     daysValue: {
         ...typography.h3,
-        color: colors.text,
+        color: baseColors.text,
         lineHeight: 20,
     },
     daysLabel: {
         ...typography.small,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         fontSize: 10,
     },
     prepSection: {
@@ -312,16 +312,15 @@ const styles = StyleSheet.create({
     },
     prepLabel: {
         ...typography.caption,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     prepValue: {
         ...typography.caption,
-        color: colors.primary,
         fontWeight: '700' as any,
     },
     progressBg: {
         height: 8,
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         borderRadius: 4,
         overflow: 'hidden',
     },
@@ -335,7 +334,7 @@ const styles = StyleSheet.create({
     },
     deleteBtnText: {
         ...typography.small,
-        color: colors.textMuted,
+        color: baseColors.textMuted,
     },
     emptyState: {
         alignItems: 'center',
@@ -347,13 +346,13 @@ const styles = StyleSheet.create({
     },
     emptyTitle: {
         ...typography.h2,
-        color: colors.text,
+        color: baseColors.text,
         textAlign: 'center',
         marginBottom: spacing.sm,
     },
     emptySubtitle: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         textAlign: 'center',
         paddingHorizontal: spacing.xl,
     },
@@ -364,27 +363,27 @@ const styles = StyleSheet.create({
         padding: spacing.lg,
     },
     modalContent: {
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
     },
     modalTitle: {
         ...typography.h2,
-        color: colors.text,
+        color: baseColors.text,
         marginBottom: spacing.xl,
     },
     dateSelector: {
         marginVertical: spacing.md,
         padding: spacing.md,
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
         borderRadius: borderRadius.md,
     },
     label: {
         ...typography.caption,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginBottom: 4,
     },
     dateValue: {
         ...typography.body,
-        color: colors.text,
+        color: baseColors.text,
         fontWeight: '600' as any,
     },
     prepInput: {
@@ -392,7 +391,6 @@ const styles = StyleSheet.create({
     },
     prepValueText: {
         ...typography.body,
-        color: colors.primary,
         fontWeight: '700' as any,
     },
     slider: {
