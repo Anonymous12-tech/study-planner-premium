@@ -80,10 +80,22 @@ export const updateSubject = async (updatedSubject: Subject): Promise<void> => {
 
 export const deleteSubject = async (subjectId: string): Promise<void> => {
     try {
-        const { error } = await supabase.from('subjects').delete().eq('id', subjectId);
-        if (error) throw error;
+        // 1. Delete the subject (Cascading deletes in DB should handle tasks/sessions)
+        const { error: deleteError } = await supabase.from('subjects').delete().eq('id', subjectId);
+        if (deleteError) throw deleteError;
+
+        // 2. Clean up user preferences if necessary
+        const prefs = await getUserPreferences();
+        if (prefs && prefs.selectedSubjectIds.includes(subjectId)) {
+            const updatedIds = prefs.selectedSubjectIds.filter(id => id !== subjectId);
+            await saveUserPreferences({
+                ...prefs,
+                selectedSubjectIds: updatedIds
+            });
+        }
     } catch (error) {
         console.error('Error deleting subject:', error);
+        throw error; // Rethrow to show in UI if needed
     }
 };
 

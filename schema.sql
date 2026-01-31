@@ -40,7 +40,7 @@ create table public.subjects (
 create table public.tasks (
   id text primary key,
   user_id uuid references auth.users not null,
-  subject_id text references public.subjects(id),
+  subject_id text references public.subjects(id) on delete cascade,
   topic text not null,
   planned_duration integer default 0,
   is_completed boolean default false,
@@ -64,7 +64,7 @@ create table public.todos (
 create table public.study_sessions (
   id text primary key,
   user_id uuid references auth.users not null,
-  subject_id text references public.subjects(id),
+  subject_id text references public.subjects(id) on delete cascade,
   start_time bigint not null,
   end_time bigint,
   duration integer default 0,
