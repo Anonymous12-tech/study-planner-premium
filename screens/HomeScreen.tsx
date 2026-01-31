@@ -150,15 +150,23 @@ export const HomeScreen = ({ navigation }: any) => {
                                 chartConfig={{
                                     backgroundGradientFrom: colors.backgroundSecondary,
                                     backgroundGradientTo: colors.backgroundSecondary,
-                                    color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+                                    color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
                                     labelColor: (opacity = 1) => colors.textSecondary,
                                     strokeWidth: 2,
-                                    barPercentage: 0.6,
+                                    barPercentage: 0.7,
                                     decimalPlaces: 0,
+                                    propsForBackgroundLines: {
+                                        strokeDasharray: '',
+                                        stroke: colors.border,
+                                        strokeWidth: 1,
+                                        opacity: 0.1,
+                                    },
                                 }}
                                 style={styles.chart}
                                 fromZero
-                                showValuesOnTopOfBars
+                                withInnerLines={false}
+                                flatColor={true}
+                                showValuesOnTopOfBars={false}
                             />
                         </Card>
                     </View>

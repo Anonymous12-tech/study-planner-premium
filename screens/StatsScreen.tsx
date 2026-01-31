@@ -13,6 +13,7 @@ import {
     getAchievements,
     AchievementBadge
 } from '../utils/calculations';
+import { DonutChart } from '../components/DonutChart';
 import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../types';
 import { BadgeItem } from '../components/BadgeItem';
 import * as Sharing from 'expo-sharing';
@@ -181,15 +182,19 @@ export const StatsScreen = () => {
     const chartConfig = {
         backgroundGradientFrom: colors.backgroundSecondary,
         backgroundGradientTo: colors.backgroundSecondary,
-        color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+        color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
         labelColor: (opacity = 1) => colors.textSecondary,
         strokeWidth: 2,
-        barPercentage: 0.6,
+        barPercentage: 0.7,
         decimalPlaces: 0,
         propsForBackgroundLines: {
             strokeDasharray: '',
             stroke: colors.border,
             strokeWidth: 1,
+            opacity: 0.1,
+        },
+        propsForLabels: {
+            fontSize: 10,
         },
     };
 
@@ -230,21 +235,24 @@ export const StatsScreen = () => {
 
                 {/* Stats Summary Grid */}
                 <View style={styles.summaryGrid}>
-                    <Card style={styles.summaryCard}>
+                    <Card style={styles.summaryCard} variant="solid">
+                        <LinearGradient colors={['rgba(34, 211, 238, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
                         <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '20' }]}>
                             <Text style={styles.summaryEmoji}>🕒</Text>
                         </View>
                         <Text style={styles.summaryValue}>{Math.floor(stats.totalStudyTime / 3600)}<Text style={styles.unit}>h</Text></Text>
                         <Text style={styles.summaryLabel}>Total Focused</Text>
                     </Card>
-                    <Card style={styles.summaryCard}>
+                    <Card style={styles.summaryCard} variant="solid">
+                        <LinearGradient colors={['rgba(129, 140, 248, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
                         <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '20' }]}>
                             <Text style={styles.summaryEmoji}>🎯</Text>
                         </View>
                         <Text style={styles.summaryValue}>{stats.totalSessions}</Text>
                         <Text style={styles.summaryLabel}>Sessions</Text>
                     </Card>
-                    <Card style={styles.summaryCard}>
+                    <Card style={styles.summaryCard} variant="solid">
+                        <LinearGradient colors={['rgba(16, 185, 129, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
                         <View style={[styles.summaryIcon, { backgroundColor: colors.success + '20' }]}>
                             <Text style={styles.summaryEmoji}>⚡</Text>
                         </View>
@@ -321,30 +329,19 @@ export const StatsScreen = () => {
                     <Text style={styles.sectionSub}>Last 7 Days (min)</Text>
                 </View>
                 {(lineData.labels.length > 0 && lineData.datasets[0].data.length > 0) ? (
-                    <Card style={styles.chartCard}>
+                    <Card style={styles.chartCard} variant="solid">
                         <BarChart
                             data={lineData}
                             width={Dimensions.get('window').width - spacing.lg * 4}
                             height={220}
                             yAxisLabel=""
                             yAxisSuffix="m"
-                            chartConfig={{
-                                backgroundGradientFrom: colors.backgroundSecondary,
-                                backgroundGradientTo: colors.backgroundSecondary,
-                                color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
-                                labelColor: (opacity = 1) => colors.textSecondary,
-                                strokeWidth: 2,
-                                barPercentage: 0.6,
-                                decimalPlaces: 0,
-                                propsForBackgroundLines: {
-                                    strokeDasharray: '',
-                                    stroke: colors.border,
-                                    strokeWidth: 1,
-                                },
-                            }}
+                            chartConfig={chartConfig}
                             style={styles.chart}
                             fromZero
-                            showValuesOnTopOfBars
+                            showValuesOnTopOfBars={false}
+                            flatColor={true}
+                            withInnerLines={false}
                         />
                     </Card>
                 ) : (
@@ -356,19 +353,16 @@ export const StatsScreen = () => {
                 {/* Subject Distribution */}
                 <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
                     <Text style={styles.sectionTitle}>Focus Allocation</Text>
+                    <Text style={styles.sectionSub}>{period.toUpperCase()} TOTAL</Text>
                 </View>
-                <Card style={styles.chartCardPie}>
+                <Card style={styles.chartCardPie} variant="solid">
                     {pieData.length > 0 ? (
-                        <PieChart
+                        <DonutChart
                             data={pieData}
-                            width={width - spacing.lg * 2}
-                            height={200}
-                            chartConfig={chartConfig}
-                            accessor={"population"}
-                            backgroundColor={"transparent"}
-                            paddingLeft={"0"}
-                            center={[width / 4, 0]}
-                            absolute
+                            centerValue={`${Math.floor(recapTotalMinutes / 60)}h`}
+                            centerLabel="Focused"
+                            size={160}
+                            strokeWidth={15}
                         />
                     ) : (
                         <Text style={styles.emptyChart}>Start studying to see distribution.</Text>
