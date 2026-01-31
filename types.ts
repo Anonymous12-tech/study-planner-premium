@@ -53,6 +53,7 @@ export interface UserPreferences {
     dailyGoalMinutes: number;
     accentColor?: string;
     selectedSubjectIds: string[];
+    activeThemeId?: string;
 }
 
 export interface DailyStats {

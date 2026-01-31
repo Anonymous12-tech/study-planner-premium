@@ -21,6 +21,7 @@ create table public.profiles (
   daily_goal_minutes integer default 60,
   accent_color text,
   selected_subject_ids text[], -- Array of strings
+  active_theme_id text default 'default',
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 

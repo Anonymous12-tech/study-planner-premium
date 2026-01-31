@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, Platform, TouchableOpacity, Share, Alert, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart, PieChart } from 'react-native-chart-kit';
@@ -16,9 +17,13 @@ import {
 import { DonutChart } from '../components/DonutChart';
 import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../types';
 import { BadgeItem } from '../components/BadgeItem';
+import { MomentumHeatmap } from '../components/MomentumHeatmap';
+import { useTheme } from '../context/ThemeContext';
+import { AURAS, Aura } from '../constants/theme';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import { generateReportHTML } from '../utils/reportGenerator';
+import { checkAuraUnlock } from '../utils/calculations';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +36,7 @@ export const StatsScreen = () => {
     const [tasks, setTasks] = useState<StudyTask[]>([]);
     const [todos, setTodos] = useState<StudyTodo[]>([]);
     const [period, setPeriod] = useState<PeriodType>('week');
+    const { colors, gradients, activeAura, setAura } = useTheme();
     const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
     const [localDataExists, setLocalDataExists] = useState(false);
     const [migrating, setMigrating] = useState(false);
@@ -237,29 +243,83 @@ export const StatsScreen = () => {
                 <View style={styles.summaryGrid}>
                     <Card style={styles.summaryCard} variant="solid">
                         <LinearGradient colors={['rgba(34, 211, 238, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
-                        <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '20' }]}>
-                            <Text style={styles.summaryEmoji}>🕒</Text>
+                        <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '15' }]}>
+                            <Ionicons name="time" size={20} color={colors.primary} />
                         </View>
                         <Text style={styles.summaryValue}>{Math.floor(stats.totalStudyTime / 3600)}<Text style={styles.unit}>h</Text></Text>
                         <Text style={styles.summaryLabel}>Total Focused</Text>
                     </Card>
                     <Card style={styles.summaryCard} variant="solid">
                         <LinearGradient colors={['rgba(129, 140, 248, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
-                        <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '20' }]}>
-                            <Text style={styles.summaryEmoji}>🎯</Text>
+                        <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '15' }]}>
+                            <Ionicons name="flash" size={20} color={colors.secondary} />
                         </View>
                         <Text style={styles.summaryValue}>{stats.totalSessions}</Text>
                         <Text style={styles.summaryLabel}>Sessions</Text>
                     </Card>
                     <Card style={styles.summaryCard} variant="solid">
                         <LinearGradient colors={['rgba(16, 185, 129, 0.05)', 'transparent'] as any} style={StyleSheet.absoluteFill} />
-                        <View style={[styles.summaryIcon, { backgroundColor: colors.success + '20' }]}>
-                            <Text style={styles.summaryEmoji}>⚡</Text>
+                        <View style={[styles.summaryIcon, { backgroundColor: colors.success + '15' }]}>
+                            <Ionicons name="analytics" size={20} color={colors.success} />
                         </View>
                         <Text style={styles.summaryValue}>{Math.floor(stats.averageSessionDuration / 60)}<Text style={styles.unit}>m</Text></Text>
                         <Text style={styles.summaryLabel}>Avg Session</Text>
                     </Card>
                 </View>
+
+                {/* Study Momentum Heatmap */}
+                <MomentumHeatmap
+                    data={stats.dailyStats.map(d => ({ date: d.date, count: d.totalStudyTime }))}
+                    color={colors.primary}
+                />
+
+                {/* Unlockable Auras */}
+                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
+                    <Text style={styles.sectionTitle}>Unlockable Auras</Text>
+                    <Text style={styles.sectionSub}>CUSTOMIZE YOUR AMBIENCE</Text>
+                </View>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.auraScroll}
+                    contentContainerStyle={styles.auraContainer}
+                >
+                    {AURAS.map((aura) => {
+                        const isUnlocked = checkAuraUnlock(aura.id, stats);
+                        const isActive = activeAura.id === aura.id;
+
+                        return (
+                            <TouchableOpacity
+                                key={aura.id}
+                                style={[
+                                    styles.auraCard,
+                                    isActive && { borderColor: colors.primary, borderWidth: 2 }
+                                ]}
+                                onPress={() => isUnlocked && setAura(aura.id)}
+                                activeOpacity={isUnlocked ? 0.7 : 1}
+                            >
+                                <LinearGradient
+                                    colors={aura.gradients}
+                                    style={styles.auraPreview}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    {!isUnlocked && (
+                                        <View style={styles.lockOverlay}>
+                                            <Ionicons name="lock-closed" size={24} color="#FFF" />
+                                        </View>
+                                    )}
+                                </LinearGradient>
+                                <View style={styles.auraInfo}>
+                                    <Text style={styles.auraName}>{aura.name}</Text>
+                                    <Text style={styles.auraCriteria} numberOfLines={2}>
+                                        {isUnlocked ? 'Unlocked' : aura.description}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
 
                 {/* Recap Section */}
                 <View style={styles.sectionHeader}>
@@ -691,5 +751,47 @@ const styles = StyleSheet.create({
         ...typography.body,
         fontWeight: 'bold' as any,
         color: colors.background,
+    },
+    auraScroll: {
+        marginHorizontal: -spacing.lg,
+        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.xl,
+    },
+    auraContainer: {
+        paddingRight: spacing.xxl,
+        gap: spacing.md,
+        flexDirection: 'row',
+    },
+    auraCard: {
+        width: 140,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: borderRadius.lg,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    auraPreview: {
+        height: 80,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    lockOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    auraInfo: {
+        padding: spacing.sm,
+    },
+    auraName: {
+        ...typography.small,
+        fontWeight: 'bold' as any,
+        color: colors.text,
+    },
+    auraCriteria: {
+        ...typography.tiny,
+        color: colors.textSecondary,
+        marginTop: 2,
     },
 });

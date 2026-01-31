@@ -9,10 +9,12 @@ import {
     Platform,
     Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
-import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
+import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { Card } from '../components/ui/Card';
 import { CircularProgress } from '../components/ui/CircularProgress';
 import {
@@ -31,6 +33,7 @@ export const HomeScreen = ({ navigation }: any) => {
     const [prefs, setPrefs] = useState<UserPreferences | null>(null);
     const [stats, setStats] = useState<DailyStats[]>([]);
     const [activeSession, setActiveSession] = useState<StudySession | null>(null);
+    const { colors, gradients } = useTheme();
     const [refreshing, setRefreshing] = useState(false);
     const [todayMinutes, setTodayMinutes] = useState(0);
     const [chartData, setChartData] = useState<any>(null);
@@ -126,7 +129,7 @@ export const HomeScreen = ({ navigation }: any) => {
                         <Text style={styles.date}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
                     </View>
                     <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>
-                        <Text style={styles.streakEmoji}>🔥</Text>
+                        <Ionicons name="flame" size={16} color={colors.primary} style={{ marginRight: 4 }} />
                         <Text style={styles.streakText}>{streak} Day Streak</Text>
                     </TouchableOpacity>
                 </View>
@@ -150,7 +153,7 @@ export const HomeScreen = ({ navigation }: any) => {
                                 chartConfig={{
                                     backgroundGradientFrom: colors.backgroundSecondary,
                                     backgroundGradientTo: colors.backgroundSecondary,
-                                    color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
+                                    color: (opacity = 1) => `${colors.primary}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
                                     labelColor: (opacity = 1) => colors.textSecondary,
                                     strokeWidth: 2,
                                     barPercentage: 0.7,
@@ -196,7 +199,7 @@ export const HomeScreen = ({ navigation }: any) => {
                                     </View>
                                 </View>
                                 <View style={[styles.checkbox, task.isCompleted && styles.checkboxChecked]}>
-                                    {task.isCompleted && <Text style={styles.checkmark}>✓</Text>}
+                                    {task.isCompleted && <Ionicons name="checkmark" size={14} color={colors.background} />}
                                 </View>
                             </TouchableOpacity>
                         ))
@@ -237,7 +240,7 @@ export const HomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: baseColors.background,
     },
     content: {
         flex: 1,
@@ -253,21 +256,21 @@ const styles = StyleSheet.create({
     greeting: {
         ...typography.h1,
         fontSize: 28,
-        color: colors.text,
+        color: baseColors.text,
     },
     date: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     streakBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: borderRadius.full,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
     },
     streakEmoji: {
         fontSize: 16,
@@ -275,7 +278,7 @@ const styles = StyleSheet.create({
     },
     streakText: {
         ...typography.caption,
-        color: colors.text,
+        color: baseColors.text,
         fontWeight: '600' as any,
     },
     progressSection: {
@@ -293,27 +296,26 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         ...typography.h3,
-        color: colors.text,
+        color: baseColors.text,
     },
     actionText: {
         ...typography.caption,
-        color: colors.primary,
         fontWeight: '600' as any,
     },
     taskCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         padding: spacing.lg,
         borderRadius: borderRadius.lg,
         marginBottom: spacing.md,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
     },
     taskCardCompleted: {
         opacity: 0.6,
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
     },
     taskInfo: {
         flexDirection: 'row',
@@ -328,14 +330,14 @@ const styles = StyleSheet.create({
     taskTopic: {
         ...typography.body,
         fontWeight: '600' as any,
-        color: colors.text,
+        color: baseColors.text,
     },
     textCompleted: {
         textDecorationLine: 'line-through',
     },
     taskMeta: {
         ...typography.caption,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         marginTop: 2,
     },
     checkbox: {
@@ -343,15 +345,13 @@ const styles = StyleSheet.create({
         height: 24,
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     checkboxChecked: {
-        backgroundColor: colors.primary,
+        // dynamic background
     },
     checkmark: {
-        color: colors.background,
         fontSize: 14,
         fontWeight: '900' as any,
     },
@@ -366,11 +366,11 @@ const styles = StyleSheet.create({
     },
     activeText: {
         ...typography.h3,
-        color: colors.background,
+        color: baseColors.background,
     },
     activeSubtext: {
         ...typography.caption,
-        color: colors.background,
+        color: baseColors.background,
         opacity: 0.8,
     },
     emptyCard: {
@@ -379,11 +379,10 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         ...typography.body,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
     },
     emptyAction: {
         ...typography.body,
-        color: colors.primary,
         fontWeight: '600' as any,
         marginTop: spacing.sm,
     },

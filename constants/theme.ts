@@ -1,3 +1,64 @@
+export interface Aura {
+    id: string;
+    name: string;
+    primary: string;
+    secondary: string;
+    gradients: [string, string];
+    unlockCriteria: {
+        type: 'streak' | 'hours' | 'sessions';
+        value: number;
+    };
+    description: string;
+}
+
+export const AURAS: Aura[] = [
+    {
+        id: 'default',
+        name: 'Cyan Focus',
+        primary: '#22D3EE',
+        secondary: '#818CF8',
+        gradients: ['#22D3EE', '#0891B2'],
+        unlockCriteria: { type: 'streak', value: 0 },
+        description: 'The classic focus aesthetic.',
+    },
+    {
+        id: 'golden',
+        name: 'Golden Focus',
+        primary: '#F59E0B', // Amber 500
+        secondary: '#D97706', // Amber 600
+        gradients: ['#FCD34D', '#F59E0B'],
+        unlockCriteria: { type: 'streak', value: 7 },
+        description: 'Unlocks after a 7-day streak.',
+    },
+    {
+        id: 'emerald',
+        name: 'Emerald Deep Work',
+        primary: '#10B981', // Emerald 500
+        secondary: '#059669', // Emerald 600
+        gradients: ['#34D399', '#10B981'],
+        unlockCriteria: { type: 'hours', value: 50 },
+        description: 'Unlocks after 50 hours of study.',
+    },
+    {
+        id: 'ruby',
+        name: 'Ruby Intensity',
+        primary: '#EF4444', // Red 500
+        secondary: '#B91C1C', // Red 700
+        gradients: ['#F87171', '#EF4444'],
+        unlockCriteria: { type: 'sessions', value: 100 },
+        description: 'Unlocks after 100 study sessions.',
+    },
+    {
+        id: 'midnight',
+        name: 'Midnight Bloom',
+        primary: '#C084FC', // Purple 400
+        secondary: '#818CF8', // Indigo 400
+        gradients: ['#E879F9', '#A855F7'],
+        unlockCriteria: { type: 'streak', value: 14 },
+        description: 'Unlocks after a 14-day streak.',
+    },
+];
+
 export const colors = {
     // Dark theme base
     background: '#020617', // Deep near-black

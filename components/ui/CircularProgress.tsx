@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { colors, typography } from '../../constants/theme';
+import { colors as baseColors, typography } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -18,8 +19,9 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
     size = 200,
     strokeWidth = 20,
     duration = 1000,
-    label = 'Daily Done',
+    label = 'DAILY DONE',
 }) => {
+    const { colors } = useTheme();
     const animatedValue = useRef(new Animated.Value(0)).current;
 
     const center = size / 2;
@@ -86,12 +88,16 @@ const styles = StyleSheet.create({
     },
     percentageText: {
         ...typography.h1,
-        fontSize: 42,
-        color: colors.text,
+        fontSize: 38,
+        color: baseColors.text,
+        fontWeight: '700',
     },
     label: {
         ...typography.caption,
-        color: colors.textSecondary,
+        color: baseColors.textTertiary,
         marginTop: -4,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
 });

@@ -366,6 +366,7 @@ export const getUserPreferences = async (): Promise<UserPreferences | null> => {
             dailyGoalMinutes: data.daily_goal_minutes || 60,
             accentColor: data.accent_color,
             selectedSubjectIds: data.selected_subject_ids || [],
+            activeThemeId: data.active_theme_id,
         };
     } catch (error) {
         console.error('Error getting preferences:', error);
@@ -387,6 +388,7 @@ export const saveUserPreferences = async (prefs: UserPreferences): Promise<void>
             daily_goal_minutes: prefs.dailyGoalMinutes,
             accent_color: prefs.accentColor,
             selected_subject_ids: prefs.selectedSubjectIds,
+            active_theme_id: prefs.activeThemeId,
         });
         if (error) throw error;
     } catch (error) {
@@ -682,6 +684,7 @@ export const migrateLocalData = async (): Promise<{ success: boolean; count: num
                 daily_goal_minutes: prefs.dailyGoalMinutes,
                 accent_color: prefs.accentColor,
                 selected_subject_ids: prefs.selectedSubjectIds,
+                active_theme_id: prefs.activeThemeId,
             });
             if (pError) throw pError;
             migrationCount += 1;

@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, typography, borderRadius, gradients } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -22,12 +23,12 @@ const { width } = Dimensions.get('window');
 const EXAM_TYPES = ['High School', 'University', 'Medical', 'Engineering', 'Law', 'Other'];
 
 const DEFAULT_SUBJECTS = [
-    { name: 'Mathematics', color: '#22D3EE', icon: '🔢' },
-    { name: 'Physics', color: '#818CF8', icon: '⚛️' },
-    { name: 'Biology', color: '#10B981', icon: '🧬' },
-    { name: 'Chemistry', color: '#F472B6', icon: '🧪' },
-    { name: 'History', color: '#FB923C', icon: '📜' },
-    { name: 'Literature', color: '#EC4899', icon: '📖' },
+    { name: 'Mathematics', color: '#22D3EE', icon: 'calculator' },
+    { name: 'Physics', color: '#818CF8', icon: 'flash' },
+    { name: 'Biology', color: '#10B981', icon: 'leaf' },
+    { name: 'Chemistry', color: '#F472B6', icon: 'flask' },
+    { name: 'History', color: '#FB923C', icon: 'library' },
+    { name: 'Literature', color: '#EC4899', icon: 'book' },
 ];
 
 export const OnboardingScreen = ({ navigation }: any) => {
@@ -154,7 +155,12 @@ export const OnboardingScreen = ({ navigation }: any) => {
                             ]}
                             onPress={() => toggleSubject(subj)}
                         >
-                            <Text style={styles.subjectIcon}>{subj.icon}</Text>
+                            <Ionicons
+                                name={(isSelected ? subj.icon : `${subj.icon}-outline`) as any}
+                                size={32}
+                                color={isSelected ? subj.color : colors.textTertiary}
+                                style={{ marginBottom: spacing.sm }}
+                            />
                             <Text style={[styles.subjectName, isSelected && { color: subj.color }]}>
                                 {subj.name}
                             </Text>

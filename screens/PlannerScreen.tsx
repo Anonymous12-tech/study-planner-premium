@@ -11,9 +11,11 @@ import {
     RefreshControl,
     Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
+import { colors as baseColors, spacing, typography, borderRadius, gradients as baseGradients, shadows } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -39,6 +41,7 @@ const { width } = Dimensions.get('window');
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const PlannerScreen = ({ navigation }: any) => {
+    const { colors, gradients } = useTheme();
     const [selectedDate, setSelectedDate] = useState(getTodayDateString());
     const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
     const [tasks, setTasks] = useState<StudyTask[]>([]);
@@ -202,7 +205,10 @@ export const PlannerScreen = ({ navigation }: any) => {
                     return (
                         <TouchableOpacity
                             key={day}
-                            style={[styles.dayItem, isSelected && styles.dayItemActive]}
+                            style={[
+                                styles.dayItem,
+                                isSelected && { backgroundColor: colors.primary }
+                            ]}
                             onPress={() => setSelectedDate(dateStr)}
                         >
                             <Text style={[styles.dayName, isSelected && styles.dayNameActive]}>{day}</Text>
@@ -224,7 +230,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                     <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
                 </View>
                 <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>
-                    <Text style={styles.streakEmoji}>🔥</Text>
+                    <Ionicons name="flame" size={16} color={colors.primary} style={{ marginRight: 4 }} />
                     <Text style={styles.streakText}>{calculateStreak()} Day Streak</Text>
                 </TouchableOpacity>
             </View>
@@ -239,14 +245,14 @@ export const PlannerScreen = ({ navigation }: any) => {
                     <CircularProgress percentage={getCompletionPercentage()} size={160} label={getProgressLabel()} />
                     <View style={styles.actionGrid}>
                         <TouchableOpacity style={styles.actionItem} onPress={() => setTaskModalVisible(true)}>
-                            <View style={[styles.actionIcon, { backgroundColor: colors.primary + '20' }]}>
-                                <Text style={styles.actionEmoji}>📅</Text>
+                            <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
+                                <Ionicons name="add-circle" size={28} color={colors.primary} />
                             </View>
                             <Text style={styles.actionLabel}>Add Task</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.actionItem} onPress={() => setTodoModalVisible(true)}>
-                            <View style={[styles.actionIcon, { backgroundColor: colors.secondary + '20' }]}>
-                                <Text style={styles.actionEmoji}>✅</Text>
+                            <View style={[styles.actionIcon, { backgroundColor: colors.secondary + '15' }]}>
+                                <Ionicons name="checkmark-done-circle" size={28} color={colors.secondary} />
                             </View>
                             <Text style={styles.actionLabel}>Add Goal</Text>
                         </TouchableOpacity>
@@ -266,7 +272,10 @@ export const PlannerScreen = ({ navigation }: any) => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             }}
                         >
-                            <Text style={[styles.periodTabText, selectedPeriod === p && styles.periodTabTextActive]}>
+                            <Text style={[
+                                styles.periodTabText,
+                                selectedPeriod === p && { color: colors.primary }
+                            ]}>
                                 {p.charAt(0).toUpperCase() + p.slice(1)}
                             </Text>
                         </TouchableOpacity>
@@ -279,19 +288,23 @@ export const PlannerScreen = ({ navigation }: any) => {
                         {selectedPeriod === 'daily' ? "Today's Goals" :
                             selectedPeriod === 'weekly' ? "Weekly Goals" : "Monthly Goals"}
                     </Text>
-                    <Text style={styles.sectionCount}>{todos.filter(t => t.isCompleted).length}/{todos.length}</Text>
+                    <Text style={[styles.sectionCount, { color: colors.primary }]}>{todos.filter(t => t.isCompleted).length}/{todos.length}</Text>
                 </View>
 
                 {(todos || []).map(todo => (
                     <Card key={todo.id} style={styles.todoCard} variant="solid">
                         <TouchableOpacity style={styles.todoContent} onPress={() => toggleTodo(todo)}>
-                            <View style={[styles.checkbox, todo.isCompleted && styles.checkboxChecked]}>
+                            <View style={[
+                                styles.checkbox,
+                                { borderColor: colors.primary },
+                                todo.isCompleted && { backgroundColor: colors.primary }
+                            ]}>
                                 {todo.isCompleted && <Text style={styles.checkIcon}>✓</Text>}
                             </View>
                             <Text style={[styles.todoText, todo.isCompleted && styles.todoTextCompleted]}>{todo.text}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => { deleteTodo(todo.id).then(loadData); }}>
-                            <Text style={styles.deleteMini}>✕</Text>
+                            <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
                         </TouchableOpacity>
                     </Card>
                 ))}
@@ -300,7 +313,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                 {/* Study Tasks Section */}
                 <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
                     <Text style={styles.sectionTitle}>Study Sessions</Text>
-                    <Text style={styles.sectionCount}>{tasks.filter(t => t.isCompleted).length}/{tasks.length}</Text>
+                    <Text style={[styles.sectionCount, { color: colors.primary }]}>{tasks.filter(t => t.isCompleted).length}/{tasks.length}</Text>
                 </View>
 
                 {(tasks || []).map(task => {
@@ -319,18 +332,20 @@ export const PlannerScreen = ({ navigation }: any) => {
                                     <Text style={styles.taskMeta}>{subject?.icon} {subject?.name} • {task.plannedDuration} min</Text>
                                 </View>
                                 {task.isCompleted ? (
-                                    <View style={styles.taskCompletedIcon}><Text style={{ color: colors.success }}>✓</Text></View>
+                                    <View style={styles.taskCompletedIcon}>
+                                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                                    </View>
                                 ) : (
                                     <TouchableOpacity
-                                        style={styles.taskActionBtn}
+                                        style={[styles.taskActionBtn, { backgroundColor: colors.primary + '15' }]}
                                         onPress={() => navigation.navigate('Study', { taskId: task.id, subjectId: task.subjectId })}
                                     >
-                                        <Text style={styles.taskActionText}>Focus</Text>
+                                        <Text style={[styles.taskActionText, { color: colors.primary }]}>Focus</Text>
                                     </TouchableOpacity>
                                 )}
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.deleteAbsolute} onPress={() => { deleteTask(task.id).then(loadData); }}>
-                                <Text style={styles.deleteMini}>✕</Text>
+                                <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
                             </TouchableOpacity>
                         </Card>
                     );
@@ -354,7 +369,14 @@ export const PlannerScreen = ({ navigation }: any) => {
                                 <Text style={styles.label}>Priority</Text>
                                 <View style={styles.priorityToggle}>
                                     {['low', 'medium', 'high'].map(p => (
-                                        <TouchableOpacity key={p} style={[styles.pChip, priority === p && styles.pChipActive]} onPress={() => setPriority(p as any)}>
+                                        <TouchableOpacity
+                                            key={p}
+                                            style={[
+                                                styles.pChip,
+                                                priority === p && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                            ]}
+                                            onPress={() => setPriority(p as any)}
+                                        >
                                             <Text style={[styles.pChipText, priority === p && styles.pChipTextActive]}>{p[0].toUpperCase()}</Text>
                                         </TouchableOpacity>
                                     ))}
@@ -395,7 +417,7 @@ export const PlannerScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: baseColors.background },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -404,27 +426,27 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'ios' ? 60 : 40,
         marginBottom: spacing.lg,
     },
-    greeting: { ...typography.h2, color: colors.text },
-    dateText: { ...typography.caption, color: colors.textSecondary },
+    greeting: { ...typography.h2, color: baseColors.text },
+    dateText: { ...typography.caption, color: baseColors.textSecondary },
     streakBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         paddingHorizontal: spacing.md,
         paddingVertical: 8,
         borderRadius: borderRadius.full,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
     },
     streakEmoji: { fontSize: 18, marginRight: 6 },
-    streakText: { ...typography.small, color: colors.primary, fontWeight: '700' as any },
+    streakText: { ...typography.small, fontWeight: '700' as any },
     content: { flex: 1, paddingHorizontal: spacing.lg },
     progressSection: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: spacing.xl,
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         padding: spacing.lg,
         borderRadius: borderRadius.xl,
         ...shadows.medium,
@@ -439,7 +461,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     actionEmoji: { fontSize: 24 },
-    actionLabel: { ...typography.small, color: colors.textSecondary, marginTop: 4 },
+    actionLabel: { ...typography.small, color: baseColors.textSecondary, marginTop: 4 },
     calendarContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -451,19 +473,19 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.md,
         width: (width - spacing.lg * 2) / 7 - 4,
     },
-    dayItemActive: { backgroundColor: colors.primary },
-    dayName: { ...typography.small, color: colors.textSecondary, marginBottom: 4 },
-    dayNameActive: { color: colors.background, fontWeight: '700' as any },
-    dayNumber: { ...typography.body, color: colors.text, fontWeight: '600' as any },
-    dayNumberActive: { color: colors.background },
+    dayItemActive: { /* Dynamic */ },
+    dayName: { ...typography.small, color: baseColors.textSecondary, marginBottom: 4 },
+    dayNameActive: { color: baseColors.background, fontWeight: '700' as any },
+    dayNumber: { ...typography.body, color: baseColors.text, fontWeight: '600' as any },
+    dayNumberActive: { color: baseColors.background },
     periodSelector: {
         flexDirection: 'row',
-        backgroundColor: colors.backgroundSecondary,
+        backgroundColor: baseColors.backgroundSecondary,
         padding: 4,
         borderRadius: borderRadius.lg,
         marginBottom: spacing.xl,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: baseColors.border,
     },
     periodTab: {
         flex: 1,
@@ -472,15 +494,15 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.md,
     },
     periodTabActive: {
-        backgroundColor: colors.backgroundTertiary,
+        backgroundColor: baseColors.backgroundTertiary,
     },
     periodTabText: {
         ...typography.small,
-        color: colors.textSecondary,
+        color: baseColors.textSecondary,
         fontWeight: '600' as any,
     },
     periodTabTextActive: {
-        color: colors.primary,
+        /* Dynamic */
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -488,8 +510,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: spacing.md,
     },
-    sectionTitle: { ...typography.h3, color: colors.textSecondary },
-    sectionCount: { ...typography.caption, color: colors.primary, fontWeight: '700' as any },
+    sectionTitle: { ...typography.h3, color: baseColors.textSecondary },
+    sectionCount: { ...typography.caption, fontWeight: '700' as any },
     todoCard: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -502,47 +524,45 @@ const styles = StyleSheet.create({
         height: 22,
         borderRadius: 6,
         borderWidth: 2,
-        borderColor: colors.primary,
         marginRight: spacing.md,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    checkboxChecked: { backgroundColor: colors.primary },
-    checkIcon: { color: colors.background, fontSize: 14, fontWeight: '900' as any },
-    todoText: { ...typography.body, color: colors.text },
-    todoTextCompleted: { color: colors.textMuted, textDecorationLine: 'line-through' },
-    deleteMini: { color: colors.textMuted, fontSize: 16, padding: 4 },
+    checkboxChecked: { /* Dynamic */ },
+    checkIcon: { color: baseColors.background, fontSize: 14, fontWeight: '900' as any },
+    todoText: { ...typography.body, color: baseColors.text },
+    todoTextCompleted: { color: baseColors.textMuted, textDecorationLine: 'line-through' },
+    deleteMini: { color: baseColors.textMuted, fontSize: 16, padding: 4 },
     taskCard: { marginBottom: spacing.md, padding: 0 },
     taskTouch: { padding: spacing.md, flexDirection: 'row', alignItems: 'center' },
     subjectIndicator: { width: 4, height: 40, borderRadius: 2, marginRight: spacing.md },
     taskInfo: { flex: 1 },
     taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    taskTopic: { ...typography.body, fontWeight: '700' as any, color: colors.text },
-    taskMeta: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+    taskTopic: { ...typography.body, fontWeight: '700' as any, color: baseColors.text },
+    taskMeta: { ...typography.caption, color: baseColors.textSecondary, marginTop: 2 },
     priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
     priorityLabel: { fontSize: 10, fontWeight: '800' as any },
     taskActionBtn: {
-        backgroundColor: colors.primary + '15',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 8,
     },
-    taskActionText: { ...typography.small, color: colors.primary, fontWeight: '700' as any },
+    taskActionText: { ...typography.small, fontWeight: '700' as any },
     taskCompletedIcon: { marginRight: 8 },
     deleteAbsolute: { position: 'absolute', top: 12, right: 12 },
-    emptySmall: { ...typography.caption, color: colors.textMuted, textAlign: 'center', marginVertical: spacing.lg },
+    emptySmall: { ...typography.caption, color: baseColors.textMuted, textAlign: 'center', marginVertical: spacing.lg },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: spacing.lg },
-    modalContent: { backgroundColor: colors.backgroundSecondary },
-    modalTitle: { ...typography.h2, color: colors.text, marginBottom: spacing.xl },
+    modalContent: { backgroundColor: baseColors.backgroundSecondary },
+    modalTitle: { ...typography.h2, color: baseColors.text, marginBottom: spacing.xl },
     modalActions: { flexDirection: 'row', marginTop: spacing.xl },
     row: { flexDirection: 'row', marginBottom: spacing.md },
-    label: { ...typography.caption, color: colors.textSecondary, marginBottom: 8 },
+    label: { ...typography.caption, color: baseColors.textSecondary, marginBottom: 8 },
     priorityToggle: { flexDirection: 'row', gap: 8 },
-    pChip: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center' },
-    pChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    pChipText: { fontSize: 12, color: colors.textSecondary },
-    pChipTextActive: { color: colors.background, fontWeight: '700' as any },
+    pChip: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: baseColors.border, justifyContent: 'center', alignItems: 'center' },
+    pChipActive: { /* Dynamic */ },
+    pChipText: { fontSize: 12, color: baseColors.textSecondary },
+    pChipTextActive: { color: baseColors.background, fontWeight: '700' as any },
     subjectScroll: { marginVertical: spacing.md },
-    subjectChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.full, borderWidth: 1, borderColor: colors.border, marginRight: spacing.sm },
-    subjectChipText: { ...typography.caption, color: colors.textSecondary },
+    subjectChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.full, borderWidth: 1, borderColor: baseColors.border, marginRight: spacing.sm },
+    subjectChipText: { ...typography.caption, color: baseColors.textSecondary },
 });

@@ -225,3 +225,20 @@ export const getAchievements = (
 
     return badges;
 };
+
+export const checkAuraUnlock = (auraId: string, stats: Statistics): boolean => {
+    switch (auraId) {
+        case 'default':
+            return true;
+        case 'golden':
+            return stats.currentStreak >= 7 || stats.longestStreak >= 7;
+        case 'emerald':
+            return (stats.totalStudyTime / 3600) >= 50;
+        case 'ruby':
+            return stats.totalSessions >= 100;
+        case 'midnight':
+            return stats.currentStreak >= 14 || stats.longestStreak >= 14;
+        default:
+            return false;
+    }
+};
