@@ -179,7 +179,7 @@ export const SubjectsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
             <View style={styles.header}>
                 <View>

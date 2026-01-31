@@ -231,7 +231,10 @@ export const deleteGoal = async (goalId: string): Promise<void> => {
 // Tasks
 export const getTasks = async (): Promise<StudyTask[]> => {
     try {
-        const { data, error } = await supabase.from('tasks').select('*');
+        const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .order('created_at', { ascending: true });
         if (error) throw error;
 
         return (data || []).map(t => ({
@@ -487,7 +490,10 @@ export const updateDailyStats = async (date: string, session: StudySession): Pro
 // Todos
 export const getTodos = async (): Promise<StudyTodo[]> => {
     try {
-        const { data, error } = await supabase.from('todos').select('*');
+        const { data, error } = await supabase
+            .from('todos')
+            .select('*')
+            .order('created_at', { ascending: true });
         if (error) throw error;
 
         return (data || []).map(t => ({

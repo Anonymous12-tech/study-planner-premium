@@ -143,17 +143,47 @@ export const PlannerScreen = ({ navigation }: any) => {
     };
 
     const toggleTask = async (task: StudyTask) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        try {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch (e) {
+            // Ignore haptics
+        }
+
         const updated = { ...task, isCompleted: !task.isCompleted };
-        await updateTask(updated);
-        loadData();
+
+        // Optimistic UI update
+        setTasks(prev => prev.map(t => t.id === task.id ? updated : t));
+
+        try {
+            await updateTask(updated);
+            loadData();
+        } catch (error) {
+            console.error('Failed to update task:', error);
+            // Revert
+            setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+        }
     };
 
     const toggleTodo = async (todo: StudyTodo) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        try {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch (e) {
+            // Ignore haptics on web
+        }
+
         const updated = { ...todo, isCompleted: !todo.isCompleted };
-        await updateTodo(updated);
-        loadData();
+
+        // Optimistic UI update
+        setTodos(prev => prev.map(t => t.id === todo.id ? updated : t));
+
+        try {
+            await updateTodo(updated);
+            loadData();
+        } catch (error) {
+            console.error('Failed to update todo:', error);
+            // Revert on error
+            setTodos(prev => prev.map(t => t.id === todo.id ? todo : t));
+        }
     };
 
     const calculateStreak = () => {
@@ -222,7 +252,11 @@ export const PlannerScreen = ({ navigation }: any) => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient
+                colors={gradients.aura as any}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+            />
 
             <View style={styles.header}>
                 <View>
@@ -324,7 +358,20 @@ export const PlannerScreen = ({ navigation }: any) => {
                     const subject = subjects.find(s => s.id === task.subjectId);
                     return (
                         <Card key={task.id} style={styles.taskCard} variant="glass" padding="none">
-                            <View style={styles.taskTouch}>
+                            <TouchableOpacity
+                                style={styles.taskTouch}
+                                activeOpacity={0.7}
+                                onPress={() => toggleTask(task)}
+                            >
+                                <View
+                                    style={[
+                                        styles.checkbox,
+                                        { borderColor: colors.primary, marginRight: spacing.md },
+                                        task.isCompleted && { backgroundColor: colors.primary }
+                                    ]}
+                                >
+                                    {task.isCompleted && <Ionicons name="checkmark" size={14} color={colors.background} />}
+                                </View>
                                 <View style={[styles.subjectIndicator, { backgroundColor: subject?.color || colors.primary }]} />
                                 <View style={styles.taskInfo}>
                                     <View style={styles.taskRow}>
@@ -335,11 +382,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                                     </View>
                                     <Text style={styles.taskMeta}>{subject?.icon} {subject?.name} • {task.plannedDuration} min</Text>
                                 </View>
-                                {task.isCompleted ? (
-                                    <View style={styles.taskCompletedIcon}>
-                                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                                    </View>
-                                ) : (
+                                {!task.isCompleted && (
                                     <TouchableOpacity
                                         style={[styles.taskActionBtn, { backgroundColor: colors.primary + '15' }]}
                                         onPress={() => navigation.navigate('Study', { taskId: task.id, subjectId: task.subjectId })}
@@ -347,7 +390,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                                         <Text style={[styles.taskActionText, { color: colors.primary }]}>Focus</Text>
                                     </TouchableOpacity>
                                 )}
-                            </View>
+                            </TouchableOpacity>
                             <TouchableOpacity style={styles.deleteAbsolute} onPress={() => { deleteTask(task.id).then(loadData); }}>
                                 <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
                             </TouchableOpacity>
@@ -416,7 +459,7 @@ export const PlannerScreen = ({ navigation }: any) => {
                     </Card>
                 </View>
             </Modal>
-        </View>
+        </View >
     );
 };
 

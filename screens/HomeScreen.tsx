@@ -99,10 +99,26 @@ export const HomeScreen = ({ navigation }: any) => {
     };
 
     const toggleTask = async (task: StudyTask) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        try {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch (e) {
+            // Ignore haptic errors on web
+        }
+
         const updated = { ...task, isCompleted: !task.isCompleted };
-        await updateTask(updated);
-        loadData();
+
+        // Optimistic UI update
+        setTasks(prev => prev.map(t => t.id === task.id ? updated : t));
+
+        try {
+            await updateTask(updated);
+            // Refresh in background to ensure sync
+            loadData();
+        } catch (error) {
+            console.error('Failed to update task:', error);
+            // Revert on error
+            setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+        }
     };
 
     const completedCount = (tasks || []).filter(t => t.isCompleted).length;
@@ -113,6 +129,7 @@ export const HomeScreen = ({ navigation }: any) => {
             <LinearGradient
                 colors={gradients.aura as any}
                 style={StyleSheet.absoluteFill}
+                pointerEvents="none"
             />
 
             <ScrollView

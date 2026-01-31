@@ -147,7 +147,7 @@ export const StatsScreen = () => {
 
     if (!stats) return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} pointerEvents="none" />
             <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
         </View>
     );
@@ -195,7 +195,7 @@ export const StatsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
             <View style={styles.header}>
                 <Text style={styles.title}>Analytics</Text>

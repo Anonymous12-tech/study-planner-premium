@@ -268,7 +268,7 @@ export const StudyScreen = ({ route, navigation }: any) => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
             {/* Ambient Background Glow */}
             {activeSession && !activeSession.isPaused && (
