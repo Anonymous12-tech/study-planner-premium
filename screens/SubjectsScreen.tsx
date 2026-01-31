@@ -63,7 +63,7 @@ const SubjectGridCard = ({ subject, sessionsCount, onPress, onEdit, onDelete }: 
             </View>
 
             <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-                <Ionicons name="trash-outline" size={14} color={baseColors.textSecondary} />
+                <Ionicons name="trash-outline" size={18} color={baseColors.textSecondary} />
             </TouchableOpacity>
         </TouchableOpacity>
     );
@@ -363,9 +363,15 @@ const styles = StyleSheet.create({
     },
     deleteBtn: {
         position: 'absolute',
-        bottom: 15,
-        right: 15,
-        opacity: 0.5,
+        bottom: 12,
+        right: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255, 69, 58, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: 0.8,
     },
     cardTitle: {
         fontSize: 16,
