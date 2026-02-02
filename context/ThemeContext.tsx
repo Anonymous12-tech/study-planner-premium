@@ -53,7 +53,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const themeGradients = {
         ...baseGradients,
         primary: activeAura.gradients,
-        aura: [activeAura.primary + '15', '#020617'], // Adds an ambient thematic background
+        aura: [activeAura.primary + '15', '#000000'], // Adds an ambient thematic background
     };
 
     return (

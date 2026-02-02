@@ -100,7 +100,7 @@ export const GoalsScreen = () => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={gradients.aura as any} style={StyleSheet.absoluteFill} pointerEvents="none" />
+
 
             <View style={styles.header}>
                 <Text style={styles.title}>Deadlines</Text>

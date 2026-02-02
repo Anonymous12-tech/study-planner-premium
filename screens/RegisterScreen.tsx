@@ -48,7 +48,7 @@ export const RegisterScreen = ({ navigation }: any) => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <LinearGradient colors={gradients.dark as any} style={StyleSheet.absoluteFill} />
+
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

@@ -4,7 +4,48 @@
   cursor: none !important;
 }
 
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-light: color-mix(in srgb, var(--primary), white 20%);
+  --color-primary-dark: color-mix(in srgb, var(--primary), black 20%);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-light: color-mix(in srgb, var(--secondary), white 20%);
+
+  --color-accent: var(--accent);
+  --color-accent-light: color-mix(in srgb, var(--accent), white 20%);
+
+  --color-background: #000000;
+  --color-surface: #18181B;
+  /* Zinc 950 */
+  --color-surface-highlight: #27272A;
+  /* Zinc 800 */
+
+  --color-text-main: #F8FAFC;
+  /* Slate 50 */
+  --color-text-secondary: #A1A1AA;
+  /* Zinc 400 */
+  --color-text-muted: #52525B;
+  /* Zinc 600 */
+
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+}
+
+
+/* Golden Focus Theme */
+:root {
+  --primary: #F59E0B;
+  /* Amber 500 */
+  --secondary: #D97706;
+  /* Amber 600 */
+  --accent: #FCD34D;
+  /* Amber 300 */
+}
+
+
+
 body {
-  background-color: #000000;
-  color: #ffffff;
+  background-color: var(--color-background);
+  color: var(--color-text-main);
 }

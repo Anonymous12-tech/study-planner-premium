@@ -127,12 +127,8 @@ export const HomeScreen = ({ navigation }: any) => {
     const completionPercentage = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
 
     return (
-        <View style={styles.container}>
-            <LinearGradient
-                colors={gradients.aura as any}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-            />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+
 
             <ScrollView
                 style={styles.content}

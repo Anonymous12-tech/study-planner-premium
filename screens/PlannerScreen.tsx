@@ -253,12 +253,8 @@ export const PlannerScreen = ({ navigation }: any) => {
     };
 
     return (
-        <View style={styles.container}>
-            <LinearGradient
-                colors={gradients.aura as any}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-            />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+
 
             <View style={styles.header}>
                 <View>

@@ -199,10 +199,7 @@ export const OnboardingScreen = ({ navigation }: any) => {
 
     return (
         <View style={styles.container}>
-            <LinearGradient
-                colors={gradients.dark as any}
-                style={StyleSheet.absoluteFill}
-            />
+
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.progressContainer}>

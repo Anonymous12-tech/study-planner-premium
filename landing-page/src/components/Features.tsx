@@ -41,7 +41,7 @@ function SmartPlannerSection() {
                             Perfect Day
                         </span>
                     </h2>
-                    <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+                    <p className="text-xl text-text-secondary max-w-2xl mx-auto">
                         Organize tasks by day, week, or month. Check them off as you conquer your goals.
                     </p>
                 </motion.div>
@@ -54,7 +54,7 @@ function SmartPlannerSection() {
                         transition={{ duration: 0.8 }}
                         onMouseMove={handleMouseMove}
                         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-                        className="p-8 rounded-3xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-sm"
+                        className="p-8 rounded-3xl bg-surface/50 border border-border-subtle backdrop-blur-sm"
                     >
                         <div className="flex items-center gap-3 mb-6">
                             <div className="p-3 rounded-xl bg-cyan-500/10">
@@ -76,7 +76,7 @@ function SmartPlannerSection() {
                                     viewport={{ once: false }}
                                     transition={{ delay: 0.3 + i * 0.1 }}
                                     whileHover={{ x: 8, scale: 1.02 }}
-                                    className="flex items-center gap-3 p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 transition-all cursor-pointer"
+                                    className="flex items-center gap-3 p-4 rounded-xl bg-surface-highlight/50 hover:bg-surface-highlight transition-all cursor-pointer"
                                 >
                                     <motion.div
                                         whileHover={{ scale: 1.2, rotate: 360 }}
@@ -148,7 +148,7 @@ function SmartPlannerSection() {
                                         viewport={{ once: false }}
                                         transition={{ delay: 0.6 + i * 0.1 }}
                                         whileHover={{ scale: 1.1, y: -5 }}
-                                        className="text-center p-4 rounded-xl bg-zinc-800/50 cursor-pointer"
+                                        className="text-center p-4 rounded-xl bg-surface-highlight/50 cursor-pointer"
                                     >
                                         <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
                                         <div className="text-xs text-zinc-500">{stat.label}</div>
@@ -289,11 +289,11 @@ function AnalyticsSection() {
                 >
                     <h2 className="text-6xl md:text-7xl font-bold text-white mb-6">
                         Track Every{" "}
-                        <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-primary-light to-secondary-light bg-clip-text text-transparent">
                             Minute
                         </span>
                     </h2>
-                    <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+                    <p className="text-xl text-text-secondary max-w-2xl mx-auto">
                         Visualize your progress with beautiful charts. See your growth over time.
                     </p>
                 </motion.div>
@@ -304,7 +304,7 @@ function AnalyticsSection() {
                     viewport={{ once: false }}
                     transition={{ duration: 0.8, delay: 0.2 }}
                     onMouseMove={handleMouseMove}
-                    className="p-12 rounded-3xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-sm"
+                    className="p-12 rounded-3xl bg-surface/50 border border-border-subtle backdrop-blur-sm"
                 >
                     <div className="mb-8">
                         <motion.div

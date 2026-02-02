@@ -30,7 +30,11 @@ export const Card: React.FC<CardProps> = ({
                 tint={tint}
                 style={[
                     styles.card,
-                    styles.glass,
+                    {
+                        backgroundColor: colors.glass,
+                        borderColor: colors.border,
+                        borderWidth: 1
+                    },
                     { padding: spacing[padding] },
                     style,
                 ]}

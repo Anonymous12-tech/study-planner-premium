@@ -15,21 +15,21 @@ export interface Aura {
 export const AURAS: Aura[] = [
     {
         id: 'default',
-        name: 'Cyan Focus',
-        primary: '#22D3EE',
-        secondary: '#818CF8',
-        gradients: ['#22D3EE', '#0891B2'],
-        unlockCriteria: { type: 'streak', value: 0 },
-        description: 'The classic focus aesthetic.',
-    },
-    {
-        id: 'golden',
         name: 'Golden Focus',
         primary: '#F59E0B', // Amber 500
         secondary: '#D97706', // Amber 600
         gradients: ['#FCD34D', '#F59E0B'],
-        unlockCriteria: { type: 'streak', value: 7 },
-        description: 'Unlocks after a 7-day streak.',
+        unlockCriteria: { type: 'streak', value: 0 },
+        description: 'The premium golden standard.',
+    },
+    {
+        id: 'emerald_classic',
+        name: 'Emerald Flow',
+        primary: '#10B981',
+        secondary: '#06B6D4',
+        gradients: ['#10B981', '#06B6D4'],
+        unlockCriteria: { type: 'streak', value: 0 },
+        description: 'The modern flow state.',
     },
     {
         id: 'emerald',
@@ -92,20 +92,20 @@ export const AURAS: Aura[] = [
 
 export const colors = {
     // Dark theme base
-    background: '#020617', // Deep near-black
-    backgroundSecondary: '#0F172A', // Slate 900
-    backgroundTertiary: '#1E293B', // Slate 800
+    background: '#000000', // True Black
+    backgroundSecondary: '#18181B', // Zinc 950
+    backgroundTertiary: '#27272A', // Zinc 800
 
-    // Vibrant accents (Cyan/Violet as requested)
-    primary: '#22D3EE', // Cyan
-    primaryLight: '#67E8F9',
-    primaryDark: '#0891B2',
+    // Vibrant accents (Golden Focus as default)
+    primary: '#F59E0B', // Amber 500
+    primaryLight: '#FCD34D', // Amber 300
+    primaryDark: '#D97706', // Amber 600
 
-    secondary: '#818CF8', // Violet/Indigo
-    secondaryLight: '#A5B4FC',
+    secondary: '#D97706', // Amber 600
+    secondaryLight: '#F59E0B', // Amber 500
 
-    accent: '#F472B6', // Pink accent for variety
-    accentLight: '#FB923C',
+    accent: '#FCD34D', // Amber 300
+    accentLight: '#FEF3C7', // Amber 100
 
     success: '#10B981',
     warning: '#F59E0B',
@@ -113,20 +113,20 @@ export const colors = {
 
     // Text colors
     text: '#F8FAFC', // Slate 50
-    textSecondary: '#CBD5E1', // Slate 300
-    textTertiary: '#94A3B8', // Slate 400
-    textMuted: '#64748B', // Slate 500
+    textSecondary: '#A1A1AA', // Zinc 400
+    textTertiary: '#71717A', // Zinc 500
+    textMuted: '#52525B', // Zinc 600
 
     // UI elements
-    border: 'rgba(255, 255, 255, 0.1)',
+    border: 'rgba(255, 255, 255, 0.08)', // Subtler border
     borderLight: 'rgba(255, 255, 255, 0.05)',
 
     // Glass effect
-    glass: 'rgba(255, 255, 255, 0.05)',
-    glassStrong: 'rgba(255, 255, 255, 0.1)',
+    glass: 'rgba(24, 24, 27, 0.3)', // Zinc-900 at 30% opacity (subtler)
+    glassStrong: 'rgba(24, 24, 27, 0.5)', // Increased visibility but still transparent
 
     // Overlay
-    overlay: 'rgba(0, 0, 0, 0.5)',
+    overlay: 'rgba(0, 0, 0, 0.7)',
 
     // Subject colors
     subjectColors: [
@@ -249,10 +249,10 @@ export const glassmorphism = {
 };
 
 export const gradients = {
-    primary: ['#22D3EE', '#0891B2'],
-    secondary: ['#818CF8', '#4F46E5'],
+    primary: ['#FCD34D', '#F59E0B'], // Amber Gradient
+    secondary: ['#06B6D4', '#22D3EE'],
     accent: ['#F472B6', '#EC4899'],
-    dark: ['#020617', '#0F172A'],
+    dark: ['#000000', '#18181B'],
 };
 
 export default {
