@@ -128,7 +128,7 @@ export const generateReportHTML = (
             left: -100px;
             width: 400px;
             height: 400px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
             z-index: -1;
         }
         .glow-2 {
@@ -137,7 +137,7 @@ export const generateReportHTML = (
             right: -100px;
             width: 500px;
             height: 500px;
-            background: radial-gradient(circle, rgba(217, 70, 239, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(217, 119, 6, 0.1) 0%, transparent 70%);
             z-index: -1;
         }
 
@@ -147,7 +147,7 @@ export const generateReportHTML = (
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-            border-left: 4px solid #06B6D4;
+            border-left: 4px solid #F59E0B;
             padding-left: 15px;
             flex-shrink: 0;
         }
@@ -159,7 +159,7 @@ export const generateReportHTML = (
             letter-spacing: -1px;
             text-transform: uppercase;
         }
-        .accent-text { color: #06B6D4; font-weight: 800; letter-spacing: 2px; }
+        .accent-text { color: #F59E0B; font-weight: 800; letter-spacing: 2px; }
 
         /* Stats - Compact */
         .stats-grid {
@@ -183,7 +183,7 @@ export const generateReportHTML = (
             content: "";
             position: absolute;
             bottom: 0; left: 20%; right: 20%; height: 2px;
-            background: linear-gradient(to right, transparent, #06B6D4, transparent);
+            background: linear-gradient(to right, transparent, #F59E0B, transparent);
         }
         .stat-val { font-size: 32px; font-weight: 900; color: #FFFFFF; display: block; margin-bottom: 2px; }
         .stat-label { font-size: 9px; font-weight: 700; color: #E2E8F0; text-transform: uppercase; letter-spacing: 1.5px; }
@@ -321,7 +321,7 @@ export const generateReportHTML = (
             </div>
             <div style="text-align: right">
                 <div style="font-size: 11px; font-weight: 900; color: #FFFFFF;">${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                <div style="font-size: 8px; font-weight: 800; color: #06B6D4; margin-top: 2px; letter-spacing: 1px;">ID: ${new Date().getTime().toString().slice(-6)}</div>
+                <div style="font-size: 8px; font-weight: 800; color: #F59E0B; margin-top: 2px; letter-spacing: 1px;">ID: ${new Date().getTime().toString().slice(-6)}</div>
             </div>
         </div>
 
@@ -332,11 +332,11 @@ export const generateReportHTML = (
                 <span class="stat-label">Min Focus</span>
             </div>
             <div class="stat-box">
-                <span class="stat-val" style="color: #A855F7;">${goalsCompleted}</span>
+                <span class="stat-val" style="color: #FCD34D;">${goalsCompleted}</span>
                 <span class="stat-label">Goals Done</span>
             </div>
             <div class="stat-box">
-                <span class="stat-val" style="color: #D946EF;">${tasksCompleted}</span>
+                <span class="stat-val" style="color: #F59E0B;">${tasksCompleted}</span>
                 <span class="stat-label">Sessions</span>
             </div>
         </div>
