@@ -34,6 +34,8 @@ import { Card } from '../components/ui/Card';
 
 
 const { width, height } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
+const MAX_CONTENT_WIDTH = 960;
 
 export const StudyScreen = ({ route, navigation }: any) => {
     const { colors, gradients } = useTheme();
@@ -274,161 +276,163 @@ export const StudyScreen = ({ route, navigation }: any) => {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <View style={isWeb ? styles.webWrapper : { flex: 1 }}>
+                <StatusBar barStyle="light-content" />
 
 
-            {/* Ambient Background Glow */}
-            {activeSession && !activeSession.isPaused && (
-                <Animated.View
-                    style={[
-                        styles.ambientGlow,
-                        {
-                            transform: [{ scale: pulseAnim }],
-                            backgroundColor: selectedSubject ? selectedSubject.color + '20' : colors.primary + '20'
-                        }
-                    ]}
-                />
-            )}
+                {/* Ambient Background Glow */}
+                {activeSession && !activeSession.isPaused && (
+                    <Animated.View
+                        style={[
+                            styles.ambientGlow,
+                            {
+                                transform: [{ scale: pulseAnim }],
+                                backgroundColor: selectedSubject ? selectedSubject.color + '20' : colors.primary + '20'
+                            }
+                        ]}
+                    />
+                )}
 
-            <View style={styles.content}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-                        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-                        <Ionicons name="close" size={24} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                <View style={styles.content}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                            <Ionicons name="close" size={24} color={colors.textSecondary} />
+                        </TouchableOpacity>
 
-                    {activeSession && (
-                        <BlurView intensity={30} tint="dark" style={[styles.liveIndicator, { borderColor: activeSession.isPaused ? colors.error + '40' : colors.primary + '40' }]}>
-                            <View style={[styles.liveDot, { backgroundColor: activeSession.isPaused ? colors.error : colors.primary }]} />
-                            <Text style={styles.liveText}>{activeSession.isPaused ? 'PAUSED' : 'LIVE FOCUS'}</Text>
-                        </BlurView>
+                        {activeSession && (
+                            <BlurView intensity={30} tint="dark" style={[styles.liveIndicator, { borderColor: activeSession.isPaused ? colors.error + '40' : colors.primary + '40' }]}>
+                                <View style={[styles.liveDot, { backgroundColor: activeSession.isPaused ? colors.error : colors.primary }]} />
+                                <Text style={styles.liveText}>{activeSession.isPaused ? 'PAUSED' : 'LIVE FOCUS'}</Text>
+                            </BlurView>
+                        )}
+
+                        <TouchableOpacity
+                            style={[styles.headerButton, isAmbientOn && styles.headerButtonActive]}
+                            onPress={() => {
+                                setIsAmbientOn(!isAmbientOn);
+                                Haptics.selectionAsync();
+                            }}
+                        >
+                            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                            <Ionicons name={isAmbientOn ? "volume-high" : "volume-mute"} size={20} color={isAmbientOn ? colors.primary : colors.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Main Session View */}
+                    {!activeSession ? (
+                        <Animated.View style={[styles.setupView, { opacity: fadeAnim }]}>
+                            <View style={styles.setupHeader}>
+                                <Text style={[styles.setupTitle, { color: colors.primary }]}>Focus Mode</Text>
+                                <Text style={styles.setupSubtitle}>Select a subject to enter deep work.</Text>
+                            </View>
+
+                            <ScrollView
+                                contentContainerStyle={styles.subjectList}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {subjects && subjects.map(subject => (
+                                    <Card
+                                        key={subject.id}
+                                        variant="neumorphic"
+                                        padding="none"
+                                        style={[
+                                            styles.subjectCard,
+                                            selectedSubject?.id === subject.id && { borderColor: subject.color }
+                                        ]}
+                                    >
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setSelectedSubject(subject);
+                                                Haptics.selectionAsync();
+                                            }}
+                                            activeOpacity={0.7}
+                                            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', padding: spacing.md }}
+                                        >
+                                            <View style={[styles.subjectIconBox, { backgroundColor: subject.color + '20' }]}>
+                                                <Text style={{ fontSize: 24 }}>{subject.icon}</Text>
+                                            </View>
+                                            <View style={styles.subjectInfo}>
+                                                <Text style={styles.subjectName}>{subject.name}</Text>
+                                                <Text style={styles.subjectStats}>{Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m focused</Text>
+                                            </View>
+                                            {selectedSubject?.id === subject.id && (
+                                                <Ionicons name="checkmark-circle" size={24} color={subject.color} />
+                                            )}
+                                        </TouchableOpacity>
+                                    </Card>
+                                ))}
+                            </ScrollView>
+                        </Animated.View>
+                    ) : (
+                        <View style={styles.focusView}>
+
+                            <View style={styles.clockContainer}>
+                                <Text style={[styles.timerText, { color: activeSession.isPaused ? colors.textSecondary : colors.text }]}>
+                                    {formatTimer(seconds)}
+                                </Text>
+                                <Text style={styles.focusContext}>
+                                    {selectedSubject?.name} • {task ? task.topic : 'General Study'}
+                                </Text>
+                            </View>
+
+                            <View style={styles.controlsContainer}>
+                                <TouchableOpacity
+                                    style={styles.secondaryCtrl}
+                                    onPress={handleEnd}
+                                >
+                                    <View style={styles.ctrlIconCircle}>
+                                        <Ionicons name="stop" size={24} color={colors.error} />
+                                    </View>
+                                    <Text style={styles.ctrlLabel}>Stop</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.primaryCtrl}
+                                    onPress={handlePauseResume}
+                                >
+                                    <View style={[styles.playPauseBtn, { borderColor: selectedSubject?.color || colors.primary }]}>
+                                        <Ionicons
+                                            name={activeSession.isPaused ? "play" : "pause"}
+                                            size={40}
+                                            color={colors.text}
+                                            style={{ marginLeft: activeSession.isPaused ? 4 : 0 }}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.secondaryCtrl}>
+                                    <View style={styles.ctrlIconCircle}>
+                                        <Ionicons name="options" size={24} color={colors.textSecondary} />
+                                    </View>
+                                    <Text style={styles.ctrlLabel}>Adjust</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     )}
-
-                    <TouchableOpacity
-                        style={[styles.headerButton, isAmbientOn && styles.headerButtonActive]}
-                        onPress={() => {
-                            setIsAmbientOn(!isAmbientOn);
-                            Haptics.selectionAsync();
-                        }}
-                    >
-                        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-                        <Ionicons name={isAmbientOn ? "volume-high" : "volume-mute"} size={20} color={isAmbientOn ? colors.primary : colors.textSecondary} />
-                    </TouchableOpacity>
                 </View>
 
-                {/* Main Session View */}
-                {!activeSession ? (
-                    <Animated.View style={[styles.setupView, { opacity: fadeAnim }]}>
-                        <View style={styles.setupHeader}>
-                            <Text style={styles.setupTitle}>Focus Mode</Text>
-                            <Text style={styles.setupSubtitle}>Select a subject to enter deep work.</Text>
-                        </View>
-
-                        <ScrollView
-                            contentContainerStyle={styles.subjectList}
-                            showsVerticalScrollIndicator={false}
+                {!activeSession && (
+                    <View style={styles.footerContainer}>
+                        <TouchableOpacity
+                            style={[styles.startBtn, !selectedSubject && styles.startBtnDisabled]}
+                            onPress={handleStart}
+                            disabled={!selectedSubject}
                         >
-                            {subjects && subjects.map(subject => (
-                                <Card
-                                    key={subject.id}
-                                    variant="glass"
-                                    padding="none"
-                                    style={[
-                                        styles.subjectCard,
-                                        selectedSubject?.id === subject.id && { borderColor: subject.color }
-                                    ]}
-                                >
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            setSelectedSubject(subject);
-                                            Haptics.selectionAsync();
-                                        }}
-                                        activeOpacity={0.7}
-                                        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', padding: spacing.md }}
-                                    >
-                                        <View style={[styles.subjectIconBox, { backgroundColor: subject.color + '20' }]}>
-                                            <Text style={{ fontSize: 24 }}>{subject.icon}</Text>
-                                        </View>
-                                        <View style={styles.subjectInfo}>
-                                            <Text style={styles.subjectName}>{subject.name}</Text>
-                                            <Text style={styles.subjectStats}>{Math.floor(subject.totalStudyTime / 3600)}h {(Math.floor(subject.totalStudyTime / 60) % 60)}m focused</Text>
-                                        </View>
-                                        {selectedSubject?.id === subject.id && (
-                                            <Ionicons name="checkmark-circle" size={24} color={subject.color} />
-                                        )}
-                                    </TouchableOpacity>
-                                </Card>
-                            ))}
-                        </ScrollView>
-                    </Animated.View>
-                ) : (
-                    <View style={styles.focusView}>
-
-                        <View style={styles.clockContainer}>
-                            <Text style={[styles.timerText, { color: activeSession.isPaused ? colors.textSecondary : colors.text }]}>
-                                {formatTimer(seconds)}
-                            </Text>
-                            <Text style={styles.focusContext}>
-                                {selectedSubject?.name} • {task ? task.topic : 'General Study'}
-                            </Text>
-                        </View>
-
-                        <View style={styles.controlsContainer}>
-                            <TouchableOpacity
-                                style={styles.secondaryCtrl}
-                                onPress={handleEnd}
+                            <LinearGradient
+                                colors={selectedSubject ? gradients.primary as any : [colors.border, colors.border]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.startBtnGradient}
                             >
-                                <View style={styles.ctrlIconCircle}>
-                                    <Ionicons name="stop" size={24} color={colors.error} />
-                                </View>
-                                <Text style={styles.ctrlLabel}>Stop</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.primaryCtrl}
-                                onPress={handlePauseResume}
-                            >
-                                <View style={[styles.playPauseBtn, { borderColor: selectedSubject?.color || colors.primary }]}>
-                                    <Ionicons
-                                        name={activeSession.isPaused ? "play" : "pause"}
-                                        size={40}
-                                        color={colors.text}
-                                        style={{ marginLeft: activeSession.isPaused ? 4 : 0 }}
-                                    />
-                                </View>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.secondaryCtrl}>
-                                <View style={styles.ctrlIconCircle}>
-                                    <Ionicons name="options" size={24} color={colors.textSecondary} />
-                                </View>
-                                <Text style={styles.ctrlLabel}>Adjust</Text>
-                            </TouchableOpacity>
-                        </View>
+                                <Text style={styles.startBtnText}>BEGIN SESSION</Text>
+                                <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                            </LinearGradient>
+                        </TouchableOpacity>
                     </View>
                 )}
             </View>
-
-            {!activeSession && (
-                <View style={styles.footerContainer}>
-                    <TouchableOpacity
-                        style={[styles.startBtn, !selectedSubject && styles.startBtnDisabled]}
-                        onPress={handleStart}
-                        disabled={!selectedSubject}
-                    >
-                        <LinearGradient
-                            colors={selectedSubject ? gradients.primary as any : [colors.border, colors.border]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.startBtnGradient}
-                        >
-                            <Text style={styles.startBtnText}>BEGIN SESSION</Text>
-                            <Ionicons name="arrow-forward" size={20} color="#FFF" />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
-            )}
         </View>
     );
 };
@@ -437,6 +441,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: baseColors.background,
+    },
+    webWrapper: {
+        flex: 1,
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+        alignSelf: 'center' as const,
     },
     content: {
         flex: 1,
@@ -455,7 +465,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingTop: Platform.OS === 'web' ? 24 : Platform.OS === 'ios' ? 60 : 40,
         marginBottom: spacing.lg,
         zIndex: 10,
     },
@@ -466,8 +476,17 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: baseColors.backgroundSecondary,
+        // Neumorphic Convex
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        shadowColor: "#000",
+        shadowOffset: { width: 3, height: 3 },
+        shadowOpacity: 0.5,
+        shadowRadius: 3,
+        elevation: 5,
     },
     headerButtonActive: {
         // Dynamic mapping in JSX
@@ -606,14 +625,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     ctrlIconCircle: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: baseColors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#333',
+        // Neumorphic Convex
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        shadowColor: "#000",
+        shadowOffset: { width: 4, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 5,
+        elevation: 5,
         marginBottom: 8,
     },
     ctrlLabel: {
@@ -627,13 +654,25 @@ const styles = StyleSheet.create({
         marginTop: -20, // push up slightly
     },
     playPauseBtn: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: baseColors.background,
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        backgroundColor: baseColors.backgroundSecondary,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        ...shadows.medium,
+        // Neumorphic Convex Deep
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.15)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.15)',
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+        borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+        borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        shadowColor: "#000",
+        shadowOffset: { width: 6, height: 6 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+        elevation: 10,
     },
 });

@@ -24,7 +24,10 @@ export const formatTimeDetailed = (seconds: number): string => {
 
 export const getTodayDateString = (): string => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 export const getWeekDateStrings = (): string[] => {
@@ -34,7 +37,10 @@ export const getWeekDateStrings = (): string[] => {
     for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        dates.push(date.toISOString().split('T')[0]);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dates.push(`${year}-${month}-${day}`);
     }
 
     return dates;
@@ -45,51 +51,119 @@ export const calculateStreak = (dailyStats: DailyStats[]): { current: number; lo
         return { current: 0, longest: 0 };
     }
 
-    // Sort by date descending
-    const sorted = [...dailyStats].sort((a, b) => b.date.localeCompare(a.date));
+    // Build a Set of dates that have study activity for O(1) lookup
+    const activeDatesSet = new Set<string>();
+    for (const stat of dailyStats) {
+        if (stat.totalStudyTime > 0) {
+            activeDatesSet.add(stat.date);
+        }
+    }
 
+    const today = getTodayDateString();
     let currentStreak = 0;
+
+    // Current streak: start from today. If today has no entry, try yesterday.
+    // If yesterday also has no entry, streak is 0.
+    let checkDate = new Date(today + 'T12:00:00'); // noon to avoid timezone issues
+
+    if (activeDatesSet.has(today)) {
+        // Today counts
+        currentStreak = 1;
+        checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+        // Today has no study — check yesterday
+        checkDate.setDate(checkDate.getDate() - 1);
+        const year = checkDate.getFullYear();
+        const month = String(checkDate.getMonth() + 1).padStart(2, '0');
+        const day = String(checkDate.getDate()).padStart(2, '0');
+        const yesterdayStr = `${year}-${month}-${day}`;
+        if (!activeDatesSet.has(yesterdayStr)) {
+            // No yesterday either — streak is broken
+            currentStreak = 0;
+        } else {
+            currentStreak = 1;
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+    }
+
+    // Continue counting backwards
+    if (currentStreak > 0) {
+        while (true) {
+            const y = checkDate.getFullYear();
+            const m = String(checkDate.getMonth() + 1).padStart(2, '0');
+            const d = String(checkDate.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            if (activeDatesSet.has(dateStr)) {
+                currentStreak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Calculate longest streak from all data
+    const sortedDates = Array.from(activeDatesSet).sort();
     let longestStreak = 0;
     let tempStreak = 0;
 
-    const today = getTodayDateString();
-    let expectedDate = new Date(today);
-
-    // Calculate current streak
-    for (const stat of sorted) {
-        const statDate = stat.date;
-        const expectedDateStr = expectedDate.toISOString().split('T')[0];
-
-        if (statDate === expectedDateStr && stat.totalStudyTime > 0) {
-            currentStreak++;
-            expectedDate.setDate(expectedDate.getDate() - 1);
-        } else {
-            break;
-        }
-    }
-
-    // Calculate longest streak
-    for (let i = 0; i < sorted.length; i++) {
-        if (sorted[i].totalStudyTime > 0) {
+    for (let i = 0; i < sortedDates.length; i++) {
+        if (i === 0) {
             tempStreak = 1;
+        } else {
+            const prevDate = new Date(sortedDates[i - 1] + 'T12:00:00');
+            prevDate.setDate(prevDate.getDate() + 1);
+            const y = prevDate.getFullYear();
+            const m = String(prevDate.getMonth() + 1).padStart(2, '0');
+            const d = String(prevDate.getDate()).padStart(2, '0');
+            const expectedStr = `${y}-${m}-${d}`;
 
-            for (let j = i + 1; j < sorted.length; j++) {
-                const currentDate = new Date(sorted[j - 1].date);
-                currentDate.setDate(currentDate.getDate() - 1);
-                const expectedDateStr = currentDate.toISOString().split('T')[0];
-
-                if (sorted[j].date === expectedDateStr && sorted[j].totalStudyTime > 0) {
-                    tempStreak++;
-                } else {
-                    break;
-                }
+            if (sortedDates[i] === expectedStr) {
+                tempStreak++;
+            } else {
+                tempStreak = 1;
             }
-
-            longestStreak = Math.max(longestStreak, tempStreak);
         }
+        longestStreak = Math.max(longestStreak, tempStreak);
     }
 
     return { current: currentStreak, longest: longestStreak };
+};
+
+/**
+ * Returns stats for the last 7 calendar days, filling in zeros for missing days.
+ * This ensures the Trend chart always shows the actual recent 7 days.
+ */
+export const getLast7DaysStats = (dailyStats: DailyStats[]): DailyStats[] => {
+    const dataMap = new Map<string, DailyStats>();
+    for (const stat of dailyStats) {
+        dataMap.set(stat.date, stat);
+    }
+
+    const result: DailyStats[] = [];
+    const today = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${day}`;
+
+        if (dataMap.has(dateStr)) {
+            result.push(dataMap.get(dateStr)!);
+        } else {
+            result.push({
+                date: dateStr,
+                totalStudyTime: 0,
+                sessionsCount: 0,
+                subjectsStudied: [],
+            });
+        }
+    }
+
+    return result;
 };
 
 export const calculateStatistics = (
@@ -140,34 +214,46 @@ export const getMonthIdentifier = (date: Date = new Date()): string => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 };
 
-export const filterSessionsByPeriod = (
-    sessions: StudySession[],
-    period: 'day' | 'week' | 'month',
-    date: string = getTodayDateString()
-): StudySession[] => {
-    const targetDate = new Date(date);
+export const isWithinPeriod = (dateStr: string, period: string): boolean => {
+    // Parse YYYY-MM-DD manually to create local date at 00:00:00
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     if (period === 'day') {
-        return (sessions || []).filter(s =>
-            s.endTime && new Date(s.startTime).toISOString().split('T')[0] === date
-        );
+        return date.getTime() === today.getTime();
     }
 
     if (period === 'week') {
-        const weekDates = getWeekDateStrings(); // This gets last 7 days, let's stick to that for "Week"
-        return (sessions || []).filter(s =>
-            s.endTime && weekDates.includes(new Date(s.startTime).toISOString().split('T')[0])
-        );
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        // Include future dates if they exist (e.g. planner items)
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+        return date >= weekAgo && date <= nextWeek;
     }
 
     if (period === 'month') {
-        const targetMonth = getMonthIdentifier(targetDate);
-        return (sessions || []).filter(s =>
-            s.endTime && getMonthIdentifier(new Date(s.startTime)) === targetMonth
-        );
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return date >= monthStart && date <= monthEnd;
     }
 
-    return [];
+    return false;
+};
+
+export const filterSessionsByPeriod = (
+    sessions: StudySession[],
+    period: 'day' | 'week' | 'month'
+): StudySession[] => {
+    return (sessions || []).filter(s => {
+        if (!s.endTime) return false;
+        const sessionDate = new Date(s.startTime);
+        const dateStr = `${sessionDate.getFullYear()}-${String(sessionDate.getMonth() + 1).padStart(2, '0')}-${String(sessionDate.getDate()).padStart(2, '0')}`;
+        return isWithinPeriod(dateStr, period);
+    });
 };
 
 export interface AchievementBadge {

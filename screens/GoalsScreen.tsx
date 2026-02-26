@@ -7,6 +7,7 @@ import {
     Modal,
     TouchableOpacity,
     Platform,
+    Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +21,9 @@ import { Button } from '../components/ui/Button';
 import { getDeadlines, addDeadline, deleteDeadline, updateDeadline } from '../utils/storage';
 import { ExamDeadline } from '../types';
 import * as Haptics from 'expo-haptics';
+
+const isWeb = Platform.OS === 'web';
+const MAX_CONTENT_WIDTH = 960;
 
 export const GoalsScreen = () => {
     const { colors, gradients } = useTheme();
@@ -100,129 +104,131 @@ export const GoalsScreen = () => {
 
     return (
         <View style={styles.container}>
+            <View style={isWeb ? styles.webWrapper : { flex: 1 }}>
 
 
-            <View style={styles.header}>
-                <Text style={styles.title}>Deadlines</Text>
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
-                    onPress={handleOpenAdd}
-                >
-                    <Text style={[styles.addButtonText, { color: baseColors.background }]}>+ Add Exam</Text>
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {deadlines && deadlines.length > 0 ? (
-                    (deadlines || []).map((item, index) => {
-                        const daysLeft = getDaysRemaining(item.date);
-                        const isUrgent = daysLeft < 7;
-
-                        return (
-                            <Card key={item.id} style={[styles.deadlineCard, index === 0 ? styles.featuredCard : {}]}>
-                                <TouchableOpacity onPress={() => handleOpenEdit(item)}>
-                                    <View style={styles.cardHeader}>
-                                        <View>
-                                            <Text style={styles.deadlineName}>{item.name}</Text>
-                                            <Text style={styles.deadlineDate}>{new Date(item.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
-                                        </View>
-                                        <View style={[styles.daysBadge, isUrgent && { backgroundColor: colors.error }]}>
-                                            <Text style={styles.daysValue}>{daysLeft}</Text>
-                                            <Text style={styles.daysLabel}>days</Text>
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.prepSection}>
-                                        <View style={styles.prepHeader}>
-                                            <Text style={styles.prepLabel}>Preparation Level</Text>
-                                            <Text style={[styles.prepValue, { color: colors.primary }]}>{item.preparationLevel}%</Text>
-                                        </View>
-                                        <View style={styles.progressBg}>
-                                            <View style={[styles.progressFill, { width: `${item.preparationLevel}%`, backgroundColor: item.preparationLevel > 80 ? baseColors.success : colors.secondary }]} />
-                                        </View>
-                                    </View>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
-                                    <Text style={styles.deleteBtnText}>Remove</Text>
-                                </TouchableOpacity>
-                            </Card>
-                        );
-                    })
-                ) : (
-                    <View style={styles.emptyState}>
-                        <Text style={styles.emptyIcon}>🎯</Text>
-                        <Text style={styles.emptyTitle}>Stay Ahead of Your Exams</Text>
-                        <Text style={styles.emptySubtitle}>Add your upcoming deadlines to track your preparation progress and countdown the days.</Text>
-                    </View>
-                )}
-
-                <View style={{ height: 100 }} />
-            </ScrollView>
-
-            <Modal
-                visible={isModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <Card style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>{editingDeadline ? 'Edit Deadline' : 'Add Deadline'}</Text>
-
-                        <Input
-                            label="Exam / Milestone Name"
-                            placeholder="e.g. Finals - Advanced Calculus"
-                            value={name}
-                            onChangeText={setName}
-                        />
-
-                        <TouchableOpacity
-                            style={styles.dateSelector}
-                            onPress={() => setShowDatePicker(true)}
-                        >
-                            <Text style={styles.label}>Exam Date</Text>
-                            <Text style={styles.dateValue}>{date.toLocaleDateString()}</Text>
-                        </TouchableOpacity>
-
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={date}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                onChange={(event, selectedDate) => {
-                                    setShowDatePicker(Platform.OS === 'ios');
-                                    if (selectedDate) setDate(selectedDate);
-                                }}
-                                minimumDate={new Date()}
-                            />
-                        )}
-
-                        <View style={styles.prepInput}>
-                            <View style={styles.prepHeader}>
-                                <Text style={styles.label}>Current Prep Level</Text>
-                                <Text style={styles.prepValueText}>{prepLevel}%</Text>
-                            </View>
-                            <Slider
-                                style={styles.slider}
-                                minimumValue={0}
-                                maximumValue={100}
-                                step={5}
-                                value={prepLevel}
-                                onValueChange={setPrepLevel}
-                                minimumTrackTintColor={colors.primary}
-                                maximumTrackTintColor={baseColors.backgroundTertiary}
-                                thumbTintColor={colors.primary}
-                            />
-                        </View>
-
-                        <View style={styles.modalActions}>
-                            <Button title="Cancel" variant="ghost" onPress={() => setModalVisible(false)} style={{ flex: 1, marginRight: spacing.md }} />
-                            <Button title={editingDeadline ? "Save Changes" : "Add Deadline"} onPress={handleSaveDeadline} style={{ flex: 2 }} disabled={!name} />
-                        </View>
-                    </Card>
+                <View style={styles.header}>
+                    <Text style={[styles.title, { color: colors.primary }]}>Deadlines</Text>
+                    <TouchableOpacity
+                        style={[styles.addButton, { backgroundColor: colors.primary }]}
+                        onPress={handleOpenAdd}
+                    >
+                        <Text style={[styles.addButtonText, { color: baseColors.background }]}>+ Add Exam</Text>
+                    </TouchableOpacity>
                 </View>
-            </Modal>
+
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    {deadlines && deadlines.length > 0 ? (
+                        (deadlines || []).map((item, index) => {
+                            const daysLeft = getDaysRemaining(item.date);
+                            const isUrgent = daysLeft < 7;
+
+                            return (
+                                <Card key={item.id} style={[styles.deadlineCard, index === 0 ? styles.featuredCard : {}]}>
+                                    <TouchableOpacity onPress={() => handleOpenEdit(item)}>
+                                        <View style={styles.cardHeader}>
+                                            <View>
+                                                <Text style={styles.deadlineName}>{item.name}</Text>
+                                                <Text style={styles.deadlineDate}>{new Date(item.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
+                                            </View>
+                                            <View style={[styles.daysBadge, isUrgent && { backgroundColor: colors.error }]}>
+                                                <Text style={styles.daysValue}>{daysLeft}</Text>
+                                                <Text style={styles.daysLabel}>days</Text>
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.prepSection}>
+                                            <View style={styles.prepHeader}>
+                                                <Text style={styles.prepLabel}>Preparation Level</Text>
+                                                <Text style={[styles.prepValue, { color: colors.primary }]}>{item.preparationLevel}%</Text>
+                                            </View>
+                                            <View style={styles.progressBg}>
+                                                <View style={[styles.progressFill, { width: `${item.preparationLevel}%`, backgroundColor: item.preparationLevel > 80 ? baseColors.success : colors.secondary }]} />
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
+                                        <Text style={styles.deleteBtnText}>Remove</Text>
+                                    </TouchableOpacity>
+                                </Card>
+                            );
+                        })
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyIcon}>🎯</Text>
+                            <Text style={styles.emptyTitle}>Stay Ahead of Your Exams</Text>
+                            <Text style={styles.emptySubtitle}>Add your upcoming deadlines to track your preparation progress and countdown the days.</Text>
+                        </View>
+                    )}
+
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+
+                <Modal
+                    visible={isModalVisible}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setModalVisible(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <Card style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>{editingDeadline ? 'Edit Deadline' : 'Add Deadline'}</Text>
+
+                            <Input
+                                label="Exam / Milestone Name"
+                                placeholder="e.g. Finals - Advanced Calculus"
+                                value={name}
+                                onChangeText={setName}
+                            />
+
+                            <TouchableOpacity
+                                style={styles.dateSelector}
+                                onPress={() => setShowDatePicker(true)}
+                            >
+                                <Text style={styles.label}>Exam Date</Text>
+                                <Text style={styles.dateValue}>{date.toLocaleDateString()}</Text>
+                            </TouchableOpacity>
+
+                            {showDatePicker && (
+                                <DateTimePicker
+                                    value={date}
+                                    mode="date"
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    onChange={(event, selectedDate) => {
+                                        setShowDatePicker(Platform.OS === 'ios');
+                                        if (selectedDate) setDate(selectedDate);
+                                    }}
+                                    minimumDate={new Date()}
+                                />
+                            )}
+
+                            <View style={styles.prepInput}>
+                                <View style={styles.prepHeader}>
+                                    <Text style={styles.label}>Current Prep Level</Text>
+                                    <Text style={styles.prepValueText}>{prepLevel}%</Text>
+                                </View>
+                                <Slider
+                                    style={styles.slider}
+                                    minimumValue={0}
+                                    maximumValue={100}
+                                    step={5}
+                                    value={prepLevel}
+                                    onValueChange={setPrepLevel}
+                                    minimumTrackTintColor={colors.primary}
+                                    maximumTrackTintColor={baseColors.backgroundTertiary}
+                                    thumbTintColor={colors.primary}
+                                />
+                            </View>
+
+                            <View style={styles.modalActions}>
+                                <Button title="Cancel" variant="ghost" onPress={() => setModalVisible(false)} style={{ flex: 1, marginRight: spacing.md }} />
+                                <Button title={editingDeadline ? "Save Changes" : "Add Deadline"} onPress={handleSaveDeadline} style={{ flex: 2 }} disabled={!name} />
+                            </View>
+                        </Card>
+                    </View>
+                </Modal>
+            </View>
         </View>
     );
 };
@@ -232,12 +238,18 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: baseColors.background,
     },
+    webWrapper: {
+        flex: 1,
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+        alignSelf: 'center' as const,
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: spacing.lg,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingTop: Platform.OS === 'web' ? 24 : Platform.OS === 'ios' ? 60 : 40,
         marginBottom: spacing.xl,
     },
     title: {

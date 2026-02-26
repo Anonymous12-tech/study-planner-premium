@@ -7,7 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 interface CardProps {
     children: ReactNode;
     style?: StyleProp<ViewStyle>;
-    variant?: 'glass' | 'solid' | 'flat';
+    variant?: 'glass' | 'solid' | 'flat' | 'neumorphic';
     padding?: keyof typeof spacing;
     intensity?: number;
     tint?: 'light' | 'dark' | 'default';
@@ -16,7 +16,7 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({
     children,
     style,
-    variant = 'glass',
+    variant = 'neumorphic',
     padding = 'md',
     intensity = 40,
     tint = 'dark',
@@ -48,7 +48,9 @@ export const Card: React.FC<CardProps> = ({
         <View
             style={[
                 styles.card,
-                variant === 'solid' ? styles.solid : styles.flat,
+                variant === 'solid' ? styles.solid :
+                    variant === 'neumorphic' ? styles.neumorphic :
+                        styles.flat,
                 { padding: spacing[padding] },
                 style,
             ]}
@@ -77,6 +79,23 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         borderWidth: 1,
         borderColor: baseColors.borderLight,
+    },
+    neumorphic: {
+        backgroundColor: baseColors.backgroundSecondary,
+        borderColor: baseColors.border,
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+        borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+        borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        shadowColor: "#000",
+        shadowOffset: { width: 4, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 5,
+        elevation: 5,
     }
 });
 

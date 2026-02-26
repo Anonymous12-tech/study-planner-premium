@@ -1,35 +1,5 @@
 import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../types';
-import { AchievementBadge } from './calculations';
-
-const isWithinPeriod = (dateStr: string, period: string): boolean => {
-    // Parse YYYY-MM-DD manually to create local date at 00:00:00
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (period === 'day') {
-        return date.getTime() === today.getTime();
-    }
-
-    if (period === 'week') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        // Include future dates if they exist (e.g. planner items)
-        const nextWeek = new Date(today);
-        nextWeek.setDate(today.getDate() + 7);
-        return date >= weekAgo && date <= nextWeek;
-    }
-
-    if (period === 'month') {
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        return date >= monthStart && date <= monthEnd;
-    }
-
-    return false;
-};
+import { AchievementBadge, isWithinPeriod } from './calculations';
 
 export const generateReportHTML = (
     period: string,

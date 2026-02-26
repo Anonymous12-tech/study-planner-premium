@@ -2,55 +2,10 @@
 
 import { motion } from "framer-motion";
 import { Users, TrendingUp, Zap } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
-
-interface Particle {
-    id: number;
-    x: number;
-    y: number;
-    baseX: number;
-    baseY: number;
-    vx: number;
-    vy: number;
-    size: number;
-    opacity: number;
-}
+import { useEffect, useState } from "react";
 
 export default function Hero() {
     const [liveCount, setLiveCount] = useState(42);
-    const [particles, setParticles] = useState<Particle[]>([]);
-    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationFrameRef = useRef<number | undefined>(undefined);
-
-    // Initialize particles
-    useEffect(() => {
-        const initParticles = () => {
-            const newParticles: Particle[] = [];
-            const particleCount = 150;
-
-            for (let i = 0; i < particleCount; i++) {
-                const x = Math.random() * window.innerWidth;
-                const y = Math.random() * window.innerHeight;
-                newParticles.push({
-                    id: i,
-                    x,
-                    y,
-                    baseX: x,
-                    baseY: y,
-                    vx: 0,
-                    vy: 0,
-                    size: Math.random() * 3 + 1,
-                    opacity: Math.random() * 0.5 + 0.3,
-                });
-            }
-            setParticles(newParticles);
-        };
-
-        initParticles();
-        window.addEventListener('resize', initParticles);
-        return () => window.removeEventListener('resize', initParticles);
-    }, []);
 
     // Live count animation
     useEffect(() => {
@@ -59,93 +14,6 @@ export default function Hero() {
         }, 2000);
         return () => clearInterval(interval);
     }, []);
-
-    // Particle animation with cursor repulsion
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            setParticles((prevParticles) => {
-                return prevParticles.map((particle) => {
-                    // Calculate distance from mouse
-                    const dx = mousePos.x - particle.x;
-                    const dy = mousePos.y - particle.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    const repulsionRadius = 150;
-
-                    // Apply repulsion force
-                    if (distance < repulsionRadius) {
-                        const force = (repulsionRadius - distance) / repulsionRadius;
-                        const angle = Math.atan2(dy, dx);
-                        particle.vx -= Math.cos(angle) * force * 2;
-                        particle.vy -= Math.sin(angle) * force * 2;
-                    }
-
-                    // Return to base position
-                    const returnForce = 0.05;
-                    particle.vx += (particle.baseX - particle.x) * returnForce;
-                    particle.vy += (particle.baseY - particle.y) * returnForce;
-
-                    // Apply friction
-                    particle.vx *= 0.9;
-                    particle.vy *= 0.9;
-
-                    // Update position
-                    particle.x += particle.vx;
-                    particle.y += particle.vy;
-
-                    // Draw particle
-                    ctx.beginPath();
-                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(16, 185, 129, ${particle.opacity})`;
-                    ctx.fill();
-
-                    // Draw connections to nearby particles
-                    prevParticles.forEach((otherParticle) => {
-                        if (particle.id >= otherParticle.id) return;
-
-                        const dx = particle.x - otherParticle.x;
-                        const dy = particle.y - otherParticle.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-
-                        if (distance < 120) {
-                            ctx.beginPath();
-                            ctx.moveTo(particle.x, particle.y);
-                            ctx.lineTo(otherParticle.x, otherParticle.y);
-                            ctx.strokeStyle = `rgba(16, 185, 129, ${0.15 * (1 - distance / 120)})`;
-                            ctx.lineWidth = 0.5;
-                            ctx.stroke();
-                        }
-                    });
-
-                    return particle;
-                });
-            });
-
-            animationFrameRef.current = requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-        };
-    }, [mousePos, particles.length]);
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        setMousePos({ x: e.clientX, y: e.clientY });
-    };
 
     const headlineVariants = {
         hidden: { opacity: 0, y: 20 },
@@ -163,7 +31,6 @@ export default function Hero() {
     return (
         <section
             className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black"
-            onMouseMove={handleMouseMove}
         >
             {/* Animated Aura Background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -184,12 +51,6 @@ export default function Hero() {
                     className="absolute top-[40%] -right-[10%] w-[600px] h-[600px] bg-secondary/20 rounded-full blur-[100px]"
                 />
             </div >
-
-            {/* Interactive particle canvas */}
-            < canvas
-                ref={canvasRef}
-                className="absolute inset-0 pointer-events-none"
-            />
 
             {/* Subtle gradient overlay */}
             < div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black pointer-events-none" />

@@ -26,13 +26,15 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
+const MAX_CONTENT_WIDTH = 960;
 
 // Internal Component for Masonry-like Card
 const SubjectGridCard = ({ subject, sessionsCount, onPress, onEdit, onDelete }: any) => {
     const { colors } = useTheme();
     return (
         <Card
-            variant="glass"
+            variant="neumorphic"
             padding="none"
             style={[styles.card, { borderColor: subject.color + '40' }]}
         >
@@ -179,115 +181,117 @@ export const SubjectsScreen = () => {
 
     return (
         <View style={styles.container}>
+            <View style={isWeb ? styles.webWrapper : { flex: 1 }}>
 
 
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>Curriculum</Text>
-                    <Text style={styles.subtitle}>Manage your study portfolio</Text>
+                <View style={styles.header}>
+                    <View>
+                        <Text style={[styles.title, { color: colors.primary }]}>Curriculum</Text>
+                        <Text style={styles.subtitle}>Manage your study portfolio</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.addButton, { backgroundColor: colors.primary }]}
+                        onPress={() => handleOpenModal()}
+                    >
+                        <Ionicons name="add" size={24} color={baseColors.background} />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
-                    onPress={() => handleOpenModal()}
-                >
-                    <Ionicons name="add" size={24} color={baseColors.background} />
-                </TouchableOpacity>
-            </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.grid}>
-                    {subjects && subjects.map(subject => (
-                        <View key={subject.id} style={styles.gridItem}>
-                            <SubjectGridCard
-                                subject={subject}
-                                sessionsCount={sessionCounts[subject.id] || 0}
-                                onPress={() => { }}
-                                onEdit={() => handleOpenModal(subject)}
-                                onDelete={() => handleDeleteSubject(subject)}
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <View style={styles.grid}>
+                        {subjects && subjects.map(subject => (
+                            <View key={subject.id} style={styles.gridItem}>
+                                <SubjectGridCard
+                                    subject={subject}
+                                    sessionsCount={sessionCounts[subject.id] || 0}
+                                    onPress={() => { }}
+                                    onEdit={() => handleOpenModal(subject)}
+                                    onDelete={() => handleDeleteSubject(subject)}
+                                />
+                            </View>
+                        ))}
+                    </View>
+
+                    {subjects.length === 0 && (
+                        <View style={styles.emptyState}>
+                            <View style={styles.emptyIconCircle}>
+                                <Ionicons name="library" size={40} color={colors.primary} />
+                            </View>
+                            <Text style={styles.emptyTitle}>Curate Your Knowledge</Text>
+                            <Text style={styles.emptySubtitle}>Add subjects to start organizing your deep work sessions effectively.</Text>
+                            <Button
+                                title="Create First Subject"
+                                onPress={() => handleOpenModal()}
+                                style={{ marginTop: 20, width: 220, backgroundColor: colors.primary }}
                             />
                         </View>
-                    ))}
-                </View>
+                    )}
 
-                {subjects.length === 0 && (
-                    <View style={styles.emptyState}>
-                        <View style={styles.emptyIconCircle}>
-                            <Ionicons name="library" size={40} color={colors.primary} />
-                        </View>
-                        <Text style={styles.emptyTitle}>Curate Your Knowledge</Text>
-                        <Text style={styles.emptySubtitle}>Add subjects to start organizing your deep work sessions effectively.</Text>
-                        <Button
-                            title="Create First Subject"
-                            onPress={() => handleOpenModal()}
-                            style={{ marginTop: 20, width: 220, backgroundColor: colors.primary }}
-                        />
-                    </View>
-                )}
+                    <View style={{ height: 100 }} />
+                </ScrollView>
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
-
-            {/* Add/Edit Subject Modal */}
-            <Modal
-                visible={modalVisible}
-                animationType="fade"
-                transparent={true}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={styles.modalOverlay}>
-                        <KeyboardAvoidingView
-                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            style={styles.keyboardView}
-                        >
-                            <Card variant="glass" intensity={60} style={styles.modalContent}>
-                                <View style={styles.modalHeader}>
-                                    <Text style={styles.modalTitle}>
-                                        {editingSubject ? 'Edit Subject' : 'New Subject'}
-                                    </Text>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <Ionicons name="close" size={24} color={baseColors.textSecondary} />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <Input
-                                    label="Subject Name"
-                                    placeholder="e.g. Quantum Physics"
-                                    value={newSubjectName}
-                                    onChangeText={setNewSubjectName}
-                                    autoFocus
-                                />
-
-                                <Text style={styles.colorLabel}>Theme Color</Text>
-                                <View style={styles.colorGrid}>
-                                    {baseColors.subjectColors && baseColors.subjectColors.map(color => (
-                                        <TouchableOpacity
-                                            key={color}
-                                            style={[
-                                                styles.colorOption,
-                                                { backgroundColor: color },
-                                                selectedColor === color && { borderColor: '#FFF', borderWidth: 3 },
-                                            ]}
-                                            onPress={() => {
-                                                setSelectedColor(color);
-                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                            }}
-                                        >
-                                            {selectedColor === color && <Ionicons name="checkmark" size={16} color="#000" />}
+                {/* Add/Edit Subject Modal */}
+                <Modal
+                    visible={modalVisible}
+                    animationType="fade"
+                    transparent={true}
+                    onRequestClose={() => setModalVisible(false)}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <KeyboardAvoidingView
+                                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                                style={styles.keyboardView}
+                            >
+                                <Card variant="neumorphic" intensity={60} style={styles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>
+                                            {editingSubject ? 'Edit Subject' : 'New Subject'}
+                                        </Text>
+                                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                            <Ionicons name="close" size={24} color={baseColors.textSecondary} />
                                         </TouchableOpacity>
-                                    ))}
-                                </View>
+                                    </View>
 
-                                <Button
-                                    title={editingSubject ? 'Save Changes' : 'Create Subject'}
-                                    onPress={handleSaveSubject}
-                                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                />
-                            </Card>
-                        </KeyboardAvoidingView>
-                    </View>
-                </TouchableWithoutFeedback>
-            </Modal>
+                                    <Input
+                                        label="Subject Name"
+                                        placeholder="e.g. Quantum Physics"
+                                        value={newSubjectName}
+                                        onChangeText={setNewSubjectName}
+                                        autoFocus
+                                    />
+
+                                    <Text style={styles.colorLabel}>Theme Color</Text>
+                                    <View style={styles.colorGrid}>
+                                        {baseColors.subjectColors && baseColors.subjectColors.map(color => (
+                                            <TouchableOpacity
+                                                key={color}
+                                                style={[
+                                                    styles.colorOption,
+                                                    { backgroundColor: color },
+                                                    selectedColor === color && { borderColor: '#FFF', borderWidth: 3 },
+                                                ]}
+                                                onPress={() => {
+                                                    setSelectedColor(color);
+                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                }}
+                                            >
+                                                {selectedColor === color && <Ionicons name="checkmark" size={16} color="#000" />}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <Button
+                                        title={editingSubject ? 'Save Changes' : 'Create Subject'}
+                                        onPress={handleSaveSubject}
+                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                    />
+                                </Card>
+                            </KeyboardAvoidingView>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </Modal>
+            </View>
         </View>
     );
 };
@@ -297,8 +301,14 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: baseColors.background,
     },
+    webWrapper: {
+        flex: 1,
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+        alignSelf: 'center' as const,
+    },
     header: {
-        paddingTop: Platform.OS === 'ios' ? 70 : 40,
+        paddingTop: Platform.OS === 'web' ? 24 : Platform.OS === 'ios' ? 70 : 40,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.lg,
         flexDirection: 'row',

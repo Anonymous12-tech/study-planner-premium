@@ -6,13 +6,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
 import { colors, spacing, typography, borderRadius, gradients, shadows } from '../constants/theme';
 import { Card } from '../components/ui/Card';
-import { getSessions, getDailyStats, getSubjects, getTasks, getTodos, hasLocalData, migrateLocalData, getUserPreferences, saveUserPreferences } from '../utils/storage';
+import {
+    getSessions,
+    getDailyStats,
+    getSubjects,
+    getTasks,
+    getTodos,
+    hasLocalData,
+    migrateLocalData,
+    getUserPreferences,
+    saveUserPreferences
+} from '../utils/storage';
 import {
     calculateStatistics,
     formatTime,
     filterSessionsByPeriod,
     getAchievements,
-    AchievementBadge
+    getLast7DaysStats,
+    AchievementBadge,
+    checkAuraUnlock,
+    isWithinPeriod
 } from '../utils/calculations';
 import { DonutChart } from '../components/DonutChart';
 import { Statistics, Subject, StudySession, StudyTask, StudyTodo } from '../types';
@@ -23,9 +36,11 @@ import { AURAS } from '../constants/theme';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import { generateReportHTML } from '../utils/reportGenerator';
-import { checkAuraUnlock } from '../utils/calculations';
 
-const { width } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
+const MAX_CONTENT_WIDTH = 960;
+const width = isWeb ? Math.min(screenWidth, MAX_CONTENT_WIDTH) : screenWidth;
 
 type PeriodType = 'day' | 'week' | 'month';
 
@@ -80,6 +95,27 @@ export const StatsScreen = () => {
         }
     };
 
+    const handleSelectAura = (aura: any, isUnlocked: boolean) => {
+        if (!isUnlocked) {
+            Alert.alert('Aura Locked', `You need to complete its criteria to unlock ${aura.name}.`);
+            return;
+        }
+
+        if (aura.isPremium && !isPro) {
+            Alert.alert(
+                'Pro Feature',
+                'This Aura requires a Pro subscription. Since you are testing, you can enable Pro at the bottom of the screen.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Activate Pro (Trial)', onPress: togglePro }
+                ]
+            );
+            return;
+        }
+
+        setAura(aura.id);
+    };
+
     useFocusEffect(
         useCallback(() => {
             loadData();
@@ -119,7 +155,12 @@ export const StatsScreen = () => {
 
     const handleShare = async () => {
         const periodSessions = filterSessionsByPeriod(sessions, period);
-        if (periodSessions.length === 0) {
+        const periodTasks = tasks.filter(t => isWithinPeriod(t.date, period));
+        const periodTodos = todos.filter(t => isWithinPeriod(t.date, period));
+
+        const hasAnyData = periodSessions.length > 0 || periodTasks.length > 0 || periodTodos.length > 0;
+
+        if (!hasAnyData) {
             Alert.alert('No Data', `You haven't completed any goals this ${period} to share!`);
             return;
         }
@@ -147,7 +188,6 @@ export const StatsScreen = () => {
 
     if (!stats) return (
         <View style={styles.container}>
-
             <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
         </View>
     );
@@ -155,10 +195,13 @@ export const StatsScreen = () => {
     const recapSessions = filterSessionsByPeriod(sessions, period);
     const recapTotalMinutes = recapSessions.reduce((acc, s) => acc + s.duration, 0) / 60;
 
-    const dailyStatsData = stats.dailyStats || [];
-    const last7Days = dailyStatsData.slice(-7);
+    const last7Days = getLast7DaysStats(stats.dailyStats || []);
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const lineData = {
-        labels: last7Days.map(d => d.date.split('-')[2] || ''),
+        labels: last7Days.map(d => {
+            const dt = new Date(d.date + 'T12:00:00');
+            return dayLabels[dt.getDay()];
+        }),
         datasets: [{
             data: last7Days.map(d => Math.floor(d.totalStudyTime / 60)),
             color: (opacity = 1) => `rgba(34, 211, 238, ${opacity})`,
@@ -195,184 +238,216 @@ export const StatsScreen = () => {
 
     return (
         <View style={styles.container}>
-
-
-            <View style={styles.header}>
-                <Text style={styles.title}>Analytics</Text>
-                <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                    <Text style={styles.shareText}>📤 Share</Text>
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {localDataExists && (
-                    <Card style={styles.migrationCard}>
-                        <View style={styles.migrationInfo}>
-                            <Text style={styles.migrationEmoji}>📦</Text>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.migrationTitle}>Legacy Data Found</Text>
-                                <Text style={styles.migrationSubtitle}>Transfer your old local data to the cloud.</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity
-                            style={[styles.migrationButton, migrating && { opacity: 0.7 }]}
-                            onPress={handleMigrate}
-                            disabled={migrating}
-                        >
-                            {migrating ? <ActivityIndicator size="small" color={colors.background} /> : <Text style={styles.migrationButtonText}>Migrate to Cloud</Text>}
-                        </TouchableOpacity>
-                    </Card>
-                )}
-
-                <View style={styles.summaryGrid}>
-                    <Card style={styles.summaryCard} variant="glass">
-                        <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '15' }]}>
-                            <Ionicons name="time" size={20} color={colors.primary} />
-                        </View>
-                        <Text style={styles.summaryValue}>{Math.floor(stats.totalStudyTime / 3600)}<Text style={styles.unit}>h</Text></Text>
-                        <Text style={styles.summaryLabel}>Total Focused</Text>
-                    </Card>
-                    <Card style={styles.summaryCard} variant="glass">
-                        <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '15' }]}>
-                            <Ionicons name="flash" size={20} color={colors.secondary} />
-                        </View>
-                        <Text style={styles.summaryValue}>{stats.totalSessions}</Text>
-                        <Text style={styles.summaryLabel}>Sessions</Text>
-                    </Card>
-                    <Card style={styles.summaryCard} variant="glass">
-                        <View style={[styles.summaryIcon, { backgroundColor: colors.success + '15' }]}>
-                            <Ionicons name="analytics" size={20} color={colors.success} />
-                        </View>
-                        <Text style={styles.summaryValue}>{Math.floor(stats.averageSessionDuration / 60)}<Text style={styles.unit}>m</Text></Text>
-                        <Text style={styles.summaryLabel}>Avg Session</Text>
-                    </Card>
+            <View style={[isWeb ? styles.webWrapper : undefined, { flex: 1 }]}>
+                <View style={styles.header}>
+                    <Text style={[styles.title, { color: colors.primary }]}>Analytics</Text>
+                    <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+                        <Text style={styles.shareText}>📤 Share</Text>
+                    </TouchableOpacity>
                 </View>
 
-                <MomentumHeatmap
-                    data={stats.dailyStats.map(d => ({ date: d.date, count: d.totalStudyTime }))}
-                    color={colors.primary}
-                />
-
-                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Unlockable Auras</Text>
-                    <Text style={styles.sectionSub}>CUSTOMIZE YOUR AMBIENCE</Text>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.auraScroll} contentContainerStyle={styles.auraContainer}>
-                    {AURAS.map((aura) => {
-                        const isUnlocked = checkAuraUnlock(aura.id, stats);
-                        const isActive = activeAura.id === aura.id;
-                        return (
-                            <TouchableOpacity
-                                key={aura.id}
-                                style={[styles.auraCard, isActive && { borderColor: colors.primary, borderWidth: 2 }]}
-                                onPress={() => {
-                                    if (!isUnlocked) return;
-                                    if (aura.isPremium && !isPro) {
-                                        Alert.alert('Premium Aura', `The ${aura.name} is a Pro feature.`, [
-                                            { text: 'Not Now' },
-                                            { text: 'Upgrade to Pro', onPress: togglePro }
-                                        ]);
-                                        return;
-                                    }
-                                    setAura(aura.id);
-                                }}
-                            >
-                                <LinearGradient colors={aura.gradients} style={styles.auraPreview}>
-                                    {!isUnlocked && !aura.isPremium && <Ionicons name="lock-closed" size={20} color="#FFF" />}
-                                    {aura.isPremium && <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>}
-                                </LinearGradient>
-                                <View style={styles.auraInfo}>
-                                    <Text style={styles.auraName}>{aura.name}</Text>
-                                    <Text style={styles.auraCriteria} numberOfLines={1}>{aura.isPremium && !isPro ? 'PRO ACCESS' : (isUnlocked ? 'Unlocked' : aura.description)}</Text>
+                <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    {localDataExists && (
+                        <Card style={styles.migrationCard}>
+                            <View style={styles.migrationInfo}>
+                                <Text style={styles.migrationEmoji}>📦</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.migrationTitle}>Legacy Data Found</Text>
+                                    <Text style={styles.migrationSubtitle}>Transfer your old local data to the cloud.</Text>
                                 </View>
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.migrationButton, migrating && { opacity: 0.7 }]}
+                                onPress={handleMigrate}
+                                disabled={migrating}
+                            >
+                                {migrating ? <ActivityIndicator size="small" color={colors.background} /> : <Text style={styles.migrationButtonText}>Migrate to Cloud</Text>}
                             </TouchableOpacity>
-                        );
-                    })}
+                        </Card>
+                    )}
+
+                    <View style={styles.summaryGrid}>
+                        <Card style={styles.summaryCard} variant="neumorphic">
+                            <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '15' }]}>
+                                <Ionicons name="time" size={20} color={colors.primary} />
+                            </View>
+                            <Text style={styles.summaryValue}>{Math.floor(stats.totalStudyTime / 3600)}<Text style={styles.unit}>h</Text></Text>
+                            <Text style={styles.summaryLabel}>Total Focused</Text>
+                        </Card>
+                        <Card style={styles.summaryCard} variant="neumorphic">
+                            <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '15' }]}>
+                                <Ionicons name="flash" size={20} color={colors.secondary} />
+                            </View>
+                            <Text style={styles.summaryValue}>{stats.totalSessions}</Text>
+                            <Text style={styles.summaryLabel}>Sessions</Text>
+                        </Card>
+                        <Card style={styles.summaryCard} variant="neumorphic">
+                            <View style={[styles.summaryIcon, { backgroundColor: colors.success + '15' }]}>
+                                <Ionicons name="analytics" size={20} color={colors.success} />
+                            </View>
+                            <Text style={styles.summaryValue}>{Math.floor(stats.averageSessionDuration / 60)}<Text style={styles.unit}>m</Text></Text>
+                            <Text style={styles.summaryLabel}>Avg Session</Text>
+                        </Card>
+                    </View>
+
+                    <View style={isWeb ? styles.gridRow : undefined}>
+                        <View style={isWeb ? styles.gridCol : undefined}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Trend</Text>
+                                <Text style={styles.sectionSub}>Study activity over 7 days</Text>
+                            </View>
+                            <Card style={styles.chartCard} variant="neumorphic">
+                                <BarChart
+                                    data={lineData}
+                                    width={isWeb ? (width / 2) - spacing.lg * 3 : width - spacing.lg * 4}
+                                    height={220}
+                                    chartConfig={chartConfig}
+                                    style={styles.chart}
+                                    fromZero
+                                    withInnerLines={false}
+                                    yAxisLabel=""
+                                    yAxisSuffix=""
+                                />
+                            </Card>
+                        </View>
+
+                        <View style={isWeb ? styles.gridCol : undefined}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Recap</Text>
+                                <View style={styles.periodSelector}>
+                                    {(['day', 'week', 'month'] as PeriodType[]).map((p) => (
+                                        <TouchableOpacity
+                                            key={p}
+                                            style={[styles.periodButton, period === p && styles.periodButtonActive]}
+                                            onPress={() => setPeriod(p)}
+                                        >
+                                            <Text style={[styles.periodButtonText, period === p && styles.periodButtonTextActive]}>
+                                                {p.toUpperCase()}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                            <Card style={[styles.chartCardPie, { height: 260, justifyContent: 'center' }]} variant="neumorphic">
+                                {pieData.length > 0 ? (
+                                    <DonutChart
+                                        data={pieData}
+                                        size={160}
+                                        strokeWidth={18}
+                                        centerValue={formatTime(recapTotalMinutes * 60)}
+                                        centerLabel={period === 'day' ? 'Today' : period === 'week' ? 'Weekly' : 'Monthly'}
+                                    />
+                                ) : (
+                                    <View style={{ height: 160, justifyContent: 'center', alignItems: 'center' }}>
+                                        <Ionicons name="stats-chart" size={40} color={colors.textTertiary} />
+                                        <Text style={{ ...typography.small, color: colors.textSecondary, marginTop: 10 }}>No data for this period</Text>
+                                    </View>
+                                )}
+                            </Card>
+                        </View>
+                    </View>
+
+                    <View style={isWeb ? styles.gridRow : undefined}>
+                        <View style={isWeb ? { flex: 2 } : undefined}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Momentum</Text>
+                                <Text style={styles.sectionSub}>Last 18 weeks</Text>
+                            </View>
+                            <Card style={{ padding: spacing.lg, marginBottom: spacing.xl }}>
+                                <MomentumHeatmap data={stats.dailyStats.map(d => ({ date: d.date, count: d.totalStudyTime }))} />
+                            </Card>
+                        </View>
+
+                        <View style={isWeb ? { flex: 1.2 } : undefined}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Badges</Text>
+                                <TouchableOpacity onPress={() => Alert.alert("Achievements", "Complete goals to unlock badges.")}>
+                                    <Text style={styles.sectionSub}>View all →</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <Card style={styles.badgesCard} variant="neumorphic">
+                                <View style={styles.badgesGrid}>
+                                    {achievements.slice(0, 6).map((badge, idx) => (
+                                        <BadgeItem key={idx} badge={badge} />
+                                    ))}
+                                </View>
+                            </Card>
+                        </View>
+                    </View>
+
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Focus Aura</Text>
+                        <Text style={styles.sectionSub}>Unlocked by your progress</Text>
+                    </View>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.auraScroll}
+                        contentContainerStyle={styles.auraContainer}
+                    >
+                        {AURAS.map((aura) => {
+                            const isUnlocked = aura.isPremium ? isPro : checkAuraUnlock(aura.id, stats);
+                            const isActive = activeAura.id === aura.id;
+
+                            return (
+                                <TouchableOpacity
+                                    key={aura.id}
+                                    style={[
+                                        styles.auraCard,
+                                        isActive && { borderColor: colors.primary, borderWidth: 2 },
+                                        !isUnlocked && { opacity: 0.5 }
+                                    ]}
+                                    onPress={() => handleSelectAura(aura, isUnlocked)}
+                                >
+                                    <LinearGradient
+                                        colors={aura.gradients as any}
+                                        style={styles.auraPreview}
+                                    >
+                                        {isActive && <Ionicons name="checkmark-circle" size={24} color="#FFF" />}
+                                        {!isUnlocked && <Ionicons name="lock-closed" size={24} color="#FFF" />}
+                                    </LinearGradient>
+                                    <View style={styles.auraInfo}>
+                                        <Text style={styles.auraName}>{aura.name}</Text>
+                                        <Text style={styles.auraCriteria}>
+                                            {aura.isPremium ? "Premium Only" :
+                                                aura.unlockCriteria.type === 'streak' ? `${aura.unlockCriteria.value} Day Streak` :
+                                                    aura.unlockCriteria.type === 'hours' ? `${aura.unlockCriteria.value} Hours` :
+                                                        `${aura.unlockCriteria.value} Sessions`}
+                                        </Text>
+                                    </View>
+                                    {aura.isPremium && <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </ScrollView>
+
+                    <TouchableOpacity
+                        style={[styles.proToggle, { backgroundColor: isPro ? colors.success + '20' : colors.primary + '20' }]}
+                        onPress={togglePro}
+                    >
+                        <Ionicons name={isPro ? "star" : "star-outline"} size={20} color={isPro ? colors.success : colors.primary} />
+                        <Text style={[styles.proToggleText, { color: isPro ? colors.success : colors.primary }]}>
+                            {isPro ? "PRO ACCOUNT ACTIVE" : "UPGRADE TO PRO (TEST)"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <View style={{ height: 120 }} />
                 </ScrollView>
-
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recap</Text>
-                    <View style={styles.periodSelector}>
-                        {(['day', 'week', 'month'] as PeriodType[]).map((p) => (
-                            <TouchableOpacity key={p} style={[styles.periodButton, period === p && styles.periodButtonActive]} onPress={() => setPeriod(p)}>
-                                <Text style={[styles.periodButtonText, period === p && styles.periodButtonTextActive]}>{p.toUpperCase()}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-
-                <Card style={styles.recapCard} variant="glass">
-                    <Text style={styles.recapValue}>{Math.floor(recapTotalMinutes)}<Text style={styles.unit}>m</Text></Text>
-                    <Text style={styles.recapLabel}>Focus this {period}</Text>
-                </Card>
-
-                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Achievements</Text>
-                </View>
-                <Card style={styles.badgesCard} variant="glass">
-                    <View style={styles.badgesGrid}>
-                        {achievements.map(badge => <BadgeItem key={badge.id} badge={badge} />)}
-                    </View>
-                </Card>
-
-                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Trend</Text>
-                    <Text style={styles.sectionSub}>LAST 7 DAYS (min)</Text>
-                </View>
-                <Card style={styles.chartCard} variant="glass">
-                    <BarChart
-                        data={lineData}
-                        width={width - spacing.lg * 4}
-                        height={200}
-                        chartConfig={chartConfig}
-                        style={styles.chart}
-                        fromZero
-                        withInnerLines={false}
-                        yAxisLabel=""
-                        yAxisSuffix=""
-                    />
-                </Card>
-
-                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Focus Allocation</Text>
-                </View>
-                <Card style={styles.chartCardPie} variant="glass">
-                    <DonutChart data={pieData} centerValue={`${Math.floor(recapTotalMinutes / 60)}h`} centerLabel="Focused" size={160} strokeWidth={15} />
-                </Card>
-
-                <Card style={styles.streakCard}>
-                    <LinearGradient colors={['rgba(34, 211, 238, 0.1)', 'rgba(139, 92, 246, 0.1)'] as any} style={styles.streakGradient}>
-                        <View>
-                            <Text style={styles.streakTitle}>Academic Streak</Text>
-                            <Text style={styles.streakSubtitle}>Keep up the consistency!</Text>
-                        </View>
-                        <View style={styles.streakCircle}>
-                            <Text style={styles.streakValue}>{stats.currentStreak}</Text>
-                            <Text style={styles.streakLabel}>DAYS</Text>
-                        </View>
-                    </LinearGradient>
-                </Card>
-
-                <TouchableOpacity style={[styles.proToggle, { backgroundColor: isPro ? colors.success + '20' : colors.primary + '20' }]} onPress={togglePro}>
-                    <Ionicons name={isPro ? "star" : "star-outline"} size={20} color={isPro ? colors.success : colors.primary} />
-                    <Text style={[styles.proToggleText, { color: isPro ? colors.success : colors.primary }]}>
-                        {isPro ? "PRO ACCOUNT ACTIVE" : "UPGRADE TO PRO (TEST)"}
-                    </Text>
-                </TouchableOpacity>
-
-                <View style={{ height: 120 }} />
-            </ScrollView>
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
+    webWrapper: { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' as const, flex: 1 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: Platform.OS === 'web' ? 24 : Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
     title: { ...typography.h1, color: colors.text },
     shareButton: { backgroundColor: colors.primary + '10', paddingHorizontal: 16, paddingVertical: 8, borderRadius: borderRadius.full },
     shareText: { ...typography.caption, color: colors.primary, fontWeight: '700' as any },
-    scrollContent: { paddingHorizontal: spacing.lg },
+    scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 100 },
+    gridRow: { flexDirection: 'row', gap: spacing.lg, marginBottom: spacing.xl },
+    gridCol: { flex: 1 },
     summaryGrid: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
     summaryCard: { flex: 1, padding: spacing.md, alignItems: 'center' },
     summaryIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
@@ -394,21 +469,11 @@ const styles = StyleSheet.create({
     periodButtonActive: { backgroundColor: colors.backgroundSecondary },
     periodButtonText: { fontSize: 10, color: colors.textSecondary },
     periodButtonTextActive: { color: colors.primary, fontWeight: '700' as any },
-    recapCard: { padding: spacing.lg, alignItems: 'center' },
-    recapValue: { ...typography.h1, color: colors.text },
-    recapLabel: { ...typography.caption, color: colors.textSecondary },
     badgesCard: { padding: spacing.lg },
     badgesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
     chartCard: { padding: spacing.md, alignItems: 'center' },
     chart: { marginVertical: 8, borderRadius: 16 },
     chartCardPie: { padding: spacing.xl, alignItems: 'center' },
-    streakCard: { marginTop: spacing.xl, borderRadius: borderRadius.xl, overflow: 'hidden' },
-    streakGradient: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.xl },
-    streakTitle: { ...typography.h2, color: colors.primary },
-    streakSubtitle: { ...typography.tiny, color: colors.textSecondary },
-    streakCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.primary + '10', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.primary + '30' },
-    streakValue: { fontSize: 28, fontWeight: '900' as any, color: colors.primary },
-    streakLabel: { fontSize: 9, fontWeight: '700' as any, color: colors.primary },
     proBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.primary, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
     proBadgeText: { color: '#000', fontSize: 8, fontWeight: '900' as any },
     proToggle: { marginTop: spacing.xl, padding: 16, borderRadius: borderRadius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primary + '30' },

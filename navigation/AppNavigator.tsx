@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { colors as baseColors, spacing, borderRadius } from '../constants/theme'; // Renamed to avoid conflict
 import { useTheme } from '../context/ThemeContext'; // Added useTheme import
-import { HomeScreen } from '../screens/HomeScreen';
+
 import { StudyScreen } from '../screens/StudyScreen';
 import { SubjectsScreen } from '../screens/SubjectsScreen';
 import { StatsScreen } from '../screens/StatsScreen';
@@ -59,21 +59,25 @@ const AuthStack = () => (
 const MainTabs = () => {
     const { colors } = useTheme();
 
+    const isWeb = Platform.OS === 'web';
+
     return (
         <Tab.Navigator
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(15, 23, 42, 0.95)',
-                    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: isWeb ? '#000000' : Platform.OS === 'ios' ? 'transparent' : 'rgba(15, 23, 42, 0.95)',
+                    borderTopColor: 'rgba(255, 255, 255, 0.08)',
                     borderTopWidth: 1,
-                    paddingBottom: spacing.sm,
+                    paddingBottom: isWeb ? 8 : spacing.sm,
                     paddingTop: spacing.sm,
-                    height: Platform.OS === 'ios' ? 88 : 70,
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
+                    height: isWeb ? 60 : Platform.OS === 'ios' ? 88 : 70,
+                    ...(isWeb ? {} : {
+                        position: 'absolute' as const,
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                    }),
                     elevation: 0,
                     shadowOpacity: 0,
                     overflow: 'hidden',

@@ -35,10 +35,12 @@ import {
     deleteTodo
 } from '../utils/storage';
 import { StudyTask, Subject, UserPreferences, DailyStats, StudyTodo } from '../types';
-import { getTodayDateString, getWeekIdentifier, getMonthIdentifier } from '../utils/calculations';
+import { getTodayDateString, getWeekIdentifier, getMonthIdentifier, calculateStreak as calcStreak } from '../utils/calculations';
 import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
+const MAX_CONTENT_WIDTH = 960;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const PlannerScreen = ({ navigation }: any) => {
@@ -188,15 +190,9 @@ export const PlannerScreen = ({ navigation }: any) => {
         }
     };
 
-    const calculateStreak = () => {
+    const getStreakCount = () => {
         if (dailyStats.length === 0) return 0;
-        const sorted = [...dailyStats].sort((a, b) => b.date.localeCompare(a.date));
-        let streak = 0;
-        for (let i = 0; i < sorted.length; i++) {
-            if (sorted[i].totalStudyTime > 0) streak++;
-            else break;
-        }
-        return streak;
+        return calcStreak(dailyStats).current;
     };
 
     const getCompletionPercentage = () => {
@@ -254,226 +250,228 @@ export const PlannerScreen = ({ navigation }: any) => {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={isWeb ? styles.webWrapper : { flex: 1 }}>
 
 
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.greeting}>Focus, {prefs?.username || prefs?.fullName || 'Pragati'}</Text>
-                    <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
-                    <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
-                        <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: 'rgba(0,0,0,0.2)',
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 100,
-                            borderWidth: 1,
-                            borderColor: 'rgba(255,255,255,0.1)'
-                        }}>
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e', marginRight: 8 }} />
-                            <Text style={{ ...typography.caption, color: '#fff', fontWeight: '700' as any }}>
-                                {activeStudentsCount > 0 ? `${activeStudentsCount} Students Focusing` : 'Focus Room: Live'}
-                            </Text>
+                <View style={styles.header}>
+                    <View>
+                        <Text style={[styles.greeting, { color: colors.primary }]}>Focus, {prefs?.username || prefs?.fullName || 'Pragati'}</Text>
+                        <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
+                        <View style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 100,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255,255,255,0.1)'
+                            }}>
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e', marginRight: 8 }} />
+                                <Text style={{ ...typography.caption, color: '#fff', fontWeight: '700' as any }}>
+                                    {activeStudentsCount > 0 ? `${activeStudentsCount} Students Focusing` : 'Focus Room: Live'}
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                </View>
-                <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>
-                    <Ionicons name="flame" size={16} color={colors.primary} style={{ marginRight: 4 }} />
-                    <Text style={styles.streakText}>{calculateStreak()} Day Streak</Text>
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView
-                style={styles.content}
-                showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-            >
-                {/* Progress Card */}
-                <Card style={styles.progressSection} variant="glass" padding="none">
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, width: '100%' }}>
-                        <CircularProgress percentage={getCompletionPercentage()} size={160} label={getProgressLabel()} />
-                        <View style={styles.actionGrid}>
-                            <TouchableOpacity style={styles.actionItem} onPress={() => setTaskModalVisible(true)}>
-                                <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
-                                    <Ionicons name="add-circle" size={28} color={colors.primary} />
-                                </View>
-                                <Text style={styles.actionLabel}>Add Task</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionItem} onPress={() => setTodoModalVisible(true)}>
-                                <View style={[styles.actionIcon, { backgroundColor: colors.secondary + '15' }]}>
-                                    <Ionicons name="checkmark-done-circle" size={28} color={colors.secondary} />
-                                </View>
-                                <Text style={styles.actionLabel}>Add Goal</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </Card>
-
-                {renderCalendar()}
-
-                {/* Period Selector */}
-                <View style={styles.periodSelector}>
-                    {['daily', 'weekly', 'monthly'].map(p => (
-                        <TouchableOpacity
-                            key={p}
-                            style={[styles.periodTab, selectedPeriod === p && styles.periodTabActive]}
-                            onPress={() => {
-                                setSelectedPeriod(p as any);
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            }}
-                        >
-                            <Text style={[
-                                styles.periodTabText,
-                                selectedPeriod === p && { color: colors.primary }
-                            ]}>
-                                {p.charAt(0).toUpperCase() + p.slice(1)}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                    <TouchableOpacity style={styles.streakBadge} onPress={() => navigation.navigate('Stats')}>
+                        <Ionicons name="flame" size={16} color={colors.primary} style={{ marginRight: 4 }} />
+                        <Text style={styles.streakText}>{getStreakCount()} Day Streak</Text>
+                    </TouchableOpacity>
                 </View>
 
-                {/* To-dos Section */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>
-                        {selectedPeriod === 'daily' ? "Today's Goals" :
-                            selectedPeriod === 'weekly' ? "Weekly Goals" : "Monthly Goals"}
-                    </Text>
-                    <Text style={[styles.sectionCount, { color: colors.primary }]}>{todos.filter(t => t.isCompleted).length}/{todos.length}</Text>
-                </View>
-
-                {(todos || []).map(todo => (
-                    <Card key={todo.id} style={styles.todoCard} variant="glass" padding="none">
-                        <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, flex: 1 }}>
-                            <TouchableOpacity style={styles.todoContent} onPress={() => toggleTodo(todo)}>
-                                <View style={[
-                                    styles.checkbox,
-                                    { borderColor: colors.primary },
-                                    todo.isCompleted && { backgroundColor: colors.primary }
-                                ]}>
-                                    {todo.isCompleted && <Text style={styles.checkIcon}>✓</Text>}
-                                </View>
-                                <Text style={[styles.todoText, todo.isCompleted && styles.todoTextCompleted]}>{todo.text}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => { deleteTodo(todo.id).then(loadData); }}>
-                                <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
-                            </TouchableOpacity>
-                        </View>
-                    </Card>
-                ))}
-                {todos.length === 0 && <Text style={styles.emptySmall}>No quick goals set for this day.</Text>}
-
-                {/* Study Tasks Section */}
-                <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
-                    <Text style={styles.sectionTitle}>Study Sessions</Text>
-                    <Text style={[styles.sectionCount, { color: colors.primary }]}>{tasks.filter(t => t.isCompleted).length}/{tasks.length}</Text>
-                </View>
-
-                {(tasks || []).map(task => {
-                    const subject = subjects.find(s => s.id === task.subjectId);
-                    return (
-                        <Card key={task.id} style={styles.taskCard} variant="glass" padding="none">
-                            <TouchableOpacity
-                                style={styles.taskTouch}
-                                activeOpacity={0.7}
-                                onPress={() => toggleTask(task)}
-                            >
-                                <View
-                                    style={[
-                                        styles.checkbox,
-                                        { borderColor: colors.primary, marginRight: spacing.md },
-                                        task.isCompleted && { backgroundColor: colors.primary }
-                                    ]}
-                                >
-                                    {task.isCompleted && <Ionicons name="checkmark" size={14} color={colors.background} />}
-                                </View>
-                                <View style={[styles.subjectIndicator, { backgroundColor: subject?.color || colors.primary }]} />
-                                <View style={styles.taskInfo}>
-                                    <View style={styles.taskRow}>
-                                        <Text style={[styles.taskTopic, task.isCompleted && styles.todoTextCompleted]}>{task.topic}</Text>
-                                        <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? colors.error + '20' : colors.backgroundTertiary }]}>
-                                            <Text style={[styles.priorityLabel, { color: task.priority === 'high' ? colors.error : colors.textSecondary }]}>{task.priority.toUpperCase()}</Text>
-                                        </View>
+                <ScrollView
+                    style={styles.content}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+                >
+                    {/* Progress Card */}
+                    <Card style={styles.progressSection} variant="neumorphic" padding="none">
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.lg, width: '100%' }}>
+                            <CircularProgress percentage={getCompletionPercentage()} size={160} label={getProgressLabel()} />
+                            <View style={styles.actionGrid}>
+                                <TouchableOpacity style={styles.actionItem} onPress={() => setTaskModalVisible(true)}>
+                                    <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
+                                        <Ionicons name="add-circle" size={28} color={colors.primary} />
                                     </View>
-                                    <Text style={styles.taskMeta}>{subject?.icon} {subject?.name} • {task.plannedDuration} min</Text>
-                                </View>
-                                {!task.isCompleted && (
-                                    <TouchableOpacity
-                                        style={[styles.taskActionBtn, { backgroundColor: colors.primary + '15' }]}
-                                        onPress={() => navigation.navigate('Study', { taskId: task.id, subjectId: task.subjectId })}
-                                    >
-                                        <Text style={[styles.taskActionText, { color: colors.primary }]}>Focus</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.deleteAbsolute} onPress={() => { deleteTask(task.id).then(loadData); }}>
-                                <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
-                            </TouchableOpacity>
-                        </Card>
-                    );
-                })}
-                {tasks.length === 0 && <Text style={styles.emptySmall}>No focus sessions scheduled.</Text>}
-
-                <View style={{ height: 120 }} />
-            </ScrollView>
-
-            {/* Task Modal */}
-            <Modal visible={isTaskModalVisible} animationType="slide" transparent onRequestClose={() => setTaskModalVisible(false)}>
-                <View style={styles.modalOverlay}>
-                    <Card style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Schedule Study</Text>
-                        <Input label="What are you studying?" placeholder="e.g. Quantum Mechanics" value={topic} onChangeText={setTopic} />
-                        <View style={styles.row}>
-                            <View style={{ flex: 1, marginRight: spacing.md }}>
-                                <Input label="Minutes" keyboardType="numeric" value={duration} onChangeText={setDuration} />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.label}>Priority</Text>
-                                <View style={styles.priorityToggle}>
-                                    {['low', 'medium', 'high'].map(p => (
-                                        <TouchableOpacity
-                                            key={p}
-                                            style={[
-                                                styles.pChip,
-                                                priority === p && { backgroundColor: colors.primary, borderColor: colors.primary }
-                                            ]}
-                                            onPress={() => setPriority(p as any)}
-                                        >
-                                            <Text style={[styles.pChipText, priority === p && styles.pChipTextActive]}>{p[0].toUpperCase()}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
-                        <Text style={styles.label}>Subject</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectScroll}>
-                            {(subjects || []).map(s => (
-                                <TouchableOpacity key={s.id} style={[styles.subjectChip, selectedSubject?.id === s.id && { borderColor: s.color, backgroundColor: s.color + '20' }]} onPress={() => setSelectedSubject(s)}>
-                                    <Text style={[styles.subjectChipText, selectedSubject?.id === s.id && { color: s.color }]}>{s.icon} {s.name}</Text>
+                                    <Text style={styles.actionLabel}>Add Task</Text>
                                 </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                        <View style={styles.modalActions}>
-                            <Button title="Cancel" variant="ghost" onPress={() => setTaskModalVisible(false)} style={{ flex: 1, marginRight: spacing.md }} />
-                            <Button title="Plan" onPress={handleAddTask} style={{ flex: 2 }} disabled={!topic || !selectedSubject} />
+                                <TouchableOpacity style={styles.actionItem} onPress={() => setTodoModalVisible(true)}>
+                                    <View style={[styles.actionIcon, { backgroundColor: colors.secondary + '15' }]}>
+                                        <Ionicons name="checkmark-done-circle" size={28} color={colors.secondary} />
+                                    </View>
+                                    <Text style={styles.actionLabel}>Add Goal</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </Card>
-                </View>
-            </Modal>
 
-            {/* Todo Modal */}
-            <Modal visible={isTodoModalVisible} animationType="slide" transparent onRequestClose={() => setTodoModalVisible(false)}>
-                <View style={styles.modalOverlay}>
-                    <Card style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>New Daily Goal</Text>
-                        <Input label="Task name" placeholder="e.g. Buy notebooks" value={todoText} onChangeText={setTodoText} autoFocus />
-                        <View style={styles.modalActions}>
-                            <Button title="Cancel" variant="ghost" onPress={() => setTodoModalVisible(false)} style={{ flex: 1, marginRight: spacing.md }} />
-                            <Button title="Add Goal" onPress={handleAddTodo} style={{ flex: 2 }} disabled={!todoText} />
-                        </View>
-                    </Card>
-                </View>
-            </Modal>
+                    {renderCalendar()}
+
+                    {/* Period Selector */}
+                    <View style={styles.periodSelector}>
+                        {['daily', 'weekly', 'monthly'].map(p => (
+                            <TouchableOpacity
+                                key={p}
+                                style={[styles.periodTab, selectedPeriod === p && styles.periodTabActive]}
+                                onPress={() => {
+                                    setSelectedPeriod(p as any);
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                }}
+                            >
+                                <Text style={[
+                                    styles.periodTabText,
+                                    selectedPeriod === p && { color: colors.primary }
+                                ]}>
+                                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {/* To-dos Section */}
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>
+                            {selectedPeriod === 'daily' ? "Today's Goals" :
+                                selectedPeriod === 'weekly' ? "Weekly Goals" : "Monthly Goals"}
+                        </Text>
+                        <Text style={[styles.sectionCount, { color: colors.primary }]}>{todos.filter(t => t.isCompleted).length}/{todos.length}</Text>
+                    </View>
+
+                    {(todos || []).map(todo => (
+                        <Card key={todo.id} style={styles.todoCard} variant="neumorphic" padding="none">
+                            <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.md, flex: 1 }}>
+                                <TouchableOpacity style={styles.todoContent} onPress={() => toggleTodo(todo)}>
+                                    <View style={[
+                                        styles.checkbox,
+                                        { borderColor: colors.primary },
+                                        todo.isCompleted && { backgroundColor: colors.primary }
+                                    ]}>
+                                        {todo.isCompleted && <Text style={styles.checkIcon}>✓</Text>}
+                                    </View>
+                                    <Text style={[styles.todoText, todo.isCompleted && styles.todoTextCompleted]}>{todo.text}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => { deleteTodo(todo.id).then(loadData); }}>
+                                    <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
+                                </TouchableOpacity>
+                            </View>
+                        </Card>
+                    ))}
+                    {todos.length === 0 && <Text style={styles.emptySmall}>No quick goals set for this day.</Text>}
+
+                    {/* Study Tasks Section */}
+                    <View style={[styles.sectionHeader, { marginTop: spacing.xl }]}>
+                        <Text style={styles.sectionTitle}>Study Sessions</Text>
+                        <Text style={[styles.sectionCount, { color: colors.primary }]}>{tasks.filter(t => t.isCompleted).length}/{tasks.length}</Text>
+                    </View>
+
+                    {(tasks || []).map(task => {
+                        const subject = subjects.find(s => s.id === task.subjectId);
+                        return (
+                            <Card key={task.id} style={styles.taskCard} variant="neumorphic" padding="none">
+                                <TouchableOpacity
+                                    style={styles.taskTouch}
+                                    activeOpacity={0.7}
+                                    onPress={() => toggleTask(task)}
+                                >
+                                    <View
+                                        style={[
+                                            styles.checkbox,
+                                            { borderColor: colors.primary, marginRight: spacing.md },
+                                            task.isCompleted && { backgroundColor: colors.primary }
+                                        ]}
+                                    >
+                                        {task.isCompleted && <Ionicons name="checkmark" size={14} color={colors.background} />}
+                                    </View>
+                                    <View style={[styles.subjectIndicator, { backgroundColor: subject?.color || colors.primary }]} />
+                                    <View style={styles.taskInfo}>
+                                        <View style={styles.taskRow}>
+                                            <Text style={[styles.taskTopic, task.isCompleted && styles.todoTextCompleted]}>{task.topic}</Text>
+                                            <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? colors.error + '20' : colors.backgroundTertiary }]}>
+                                                <Text style={[styles.priorityLabel, { color: task.priority === 'high' ? colors.error : colors.textSecondary }]}>{task.priority.toUpperCase()}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.taskMeta}>{subject?.icon} {subject?.name} • {task.plannedDuration} min</Text>
+                                    </View>
+                                    {!task.isCompleted && (
+                                        <TouchableOpacity
+                                            style={[styles.taskActionBtn, { backgroundColor: colors.primary + '15' }]}
+                                            onPress={() => navigation.navigate('Study', { taskId: task.id, subjectId: task.subjectId })}
+                                        >
+                                            <Text style={[styles.taskActionText, { color: colors.primary }]}>Focus</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.deleteAbsolute} onPress={() => { deleteTask(task.id).then(loadData); }}>
+                                    <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
+                                </TouchableOpacity>
+                            </Card>
+                        );
+                    })}
+                    {tasks.length === 0 && <Text style={styles.emptySmall}>No focus sessions scheduled.</Text>}
+
+                    <View style={{ height: 120 }} />
+                </ScrollView>
+
+                {/* Task Modal */}
+                <Modal visible={isTaskModalVisible} animationType="slide" transparent onRequestClose={() => setTaskModalVisible(false)}>
+                    <View style={styles.modalOverlay}>
+                        <Card style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Schedule Study</Text>
+                            <Input label="What are you studying?" placeholder="e.g. Quantum Mechanics" value={topic} onChangeText={setTopic} />
+                            <View style={styles.row}>
+                                <View style={{ flex: 1, marginRight: spacing.md }}>
+                                    <Input label="Minutes" keyboardType="numeric" value={duration} onChangeText={setDuration} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Priority</Text>
+                                    <View style={styles.priorityToggle}>
+                                        {['low', 'medium', 'high'].map(p => (
+                                            <TouchableOpacity
+                                                key={p}
+                                                style={[
+                                                    styles.pChip,
+                                                    priority === p && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                                ]}
+                                                onPress={() => setPriority(p as any)}
+                                            >
+                                                <Text style={[styles.pChipText, priority === p && styles.pChipTextActive]}>{p[0].toUpperCase()}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+                            </View>
+                            <Text style={styles.label}>Subject</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectScroll}>
+                                {(subjects || []).map(s => (
+                                    <TouchableOpacity key={s.id} style={[styles.subjectChip, selectedSubject?.id === s.id && { borderColor: s.color, backgroundColor: s.color + '20' }]} onPress={() => setSelectedSubject(s)}>
+                                        <Text style={[styles.subjectChipText, selectedSubject?.id === s.id && { color: s.color }]}>{s.icon} {s.name}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                            <View style={styles.modalActions}>
+                                <Button title="Cancel" variant="ghost" onPress={() => setTaskModalVisible(false)} style={{ flex: 1, marginRight: spacing.md }} />
+                                <Button title="Plan" onPress={handleAddTask} style={{ flex: 2 }} disabled={!topic || !selectedSubject} />
+                            </View>
+                        </Card>
+                    </View>
+                </Modal>
+
+                {/* Todo Modal */}
+                <Modal visible={isTodoModalVisible} animationType="slide" transparent onRequestClose={() => setTodoModalVisible(false)}>
+                    <View style={styles.modalOverlay}>
+                        <Card style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>New Daily Goal</Text>
+                            <Input label="Task name" placeholder="e.g. Buy notebooks" value={todoText} onChangeText={setTodoText} autoFocus />
+                            <View style={styles.modalActions}>
+                                <Button title="Cancel" variant="ghost" onPress={() => setTodoModalVisible(false)} style={{ flex: 1, marginRight: spacing.md }} />
+                                <Button title="Add Goal" onPress={handleAddTodo} style={{ flex: 2 }} disabled={!todoText} />
+                            </View>
+                        </Card>
+                    </View>
+                </Modal>
+            </View>
         </View >
     );
 };
@@ -483,12 +481,18 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: baseColors.background,
     },
+    webWrapper: {
+        flex: 1,
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+        alignSelf: 'center' as const,
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: spacing.lg,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingTop: Platform.OS === 'web' ? 24 : Platform.OS === 'ios' ? 60 : 40,
         marginBottom: spacing.lg,
     },
     greeting: { ...typography.h2, color: baseColors.text },
@@ -500,8 +504,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: 8,
         borderRadius: borderRadius.full,
-        borderWidth: 1,
-        borderColor: baseColors.border,
+        // Neumorphic Convex
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        shadowColor: "#000",
+        shadowOffset: { width: 2, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 3,
     },
     streakEmoji: { fontSize: 18, marginRight: 6 },
     streakText: { ...typography.small, fontWeight: '700' as any, color: baseColors.text },
@@ -512,11 +524,22 @@ const styles = StyleSheet.create({
     actionGrid: { gap: 12 },
     actionItem: { alignItems: 'center' },
     actionIcon: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: baseColors.backgroundSecondary,
+        // Neumorphic Convex
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        shadowColor: "#000",
+        shadowOffset: { width: 3, height: 3 },
+        shadowOpacity: 0.5,
+        shadowRadius: 3,
+        elevation: 5,
     },
     actionEmoji: { fontSize: 24 },
     actionLabel: { ...typography.small, color: baseColors.textSecondary, marginTop: 4 },
@@ -530,8 +553,23 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.sm,
         borderRadius: borderRadius.md,
         width: (width - spacing.lg * 2) / 7 - 4,
+        backgroundColor: baseColors.backgroundSecondary,
+        // Neumorphic Convex
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.05)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.05)',
+        shadowColor: "#000",
+        shadowOffset: { width: 2, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    dayItemActive: { /* Dynamic */ },
+    dayItemActive: {
+        backgroundColor: baseColors.primary,
+        elevation: 0,
+        shadowOpacity: 0,
+    },
     dayName: { ...typography.small, color: baseColors.textSecondary, marginBottom: 4 },
     dayNameActive: { color: baseColors.background, fontWeight: '700' as any },
     dayNumber: { ...typography.body, color: baseColors.text, fontWeight: '600' as any },
@@ -542,8 +580,12 @@ const styles = StyleSheet.create({
         padding: 4,
         borderRadius: borderRadius.lg,
         marginBottom: spacing.xl,
+        // Neumorphic Inner (Concave)
         borderWidth: 1,
-        borderColor: baseColors.border,
+        borderTopColor: 'rgba(0, 0, 0, 0.5)',
+        borderLeftColor: 'rgba(0, 0, 0, 0.5)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        borderRightColor: 'rgba(255, 255, 255, 0.05)',
     },
     periodTab: {
         flex: 1,

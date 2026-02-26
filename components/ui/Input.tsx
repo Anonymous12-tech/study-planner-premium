@@ -33,7 +33,7 @@ export const Input: React.FC<InputProps> = ({
             <TextInput
                 style={[
                     styles.input,
-                    isFocused && { borderColor: colors.primary },
+                    isFocused && { borderColor: colors.primary, borderBottomColor: colors.primary },
                     error && styles.inputError,
                     style,
                 ]}
@@ -59,19 +59,22 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: baseColors.backgroundSecondary,
-        borderWidth: 1,
-        borderColor: baseColors.border,
         borderRadius: borderRadius.md,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.md,
         color: baseColors.text,
         fontSize: 16,
-    },
-    inputFocused: {
-        // borderColor: colors.primary,  // Will be applied dynamically in JSX
+        // Neumorphic Concave / Inset look
+        borderWidth: 1,
+        borderTopColor: 'rgba(0, 0, 0, 0.5)',
+        borderLeftColor: 'rgba(0, 0, 0, 0.5)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        borderRightColor: 'rgba(255, 255, 255, 0.05)',
     },
     inputError: {
         borderColor: baseColors.error,
+        borderTopColor: baseColors.error,
+        borderLeftColor: baseColors.error,
     },
     error: {
         ...typography.small,

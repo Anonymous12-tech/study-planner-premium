@@ -248,6 +248,44 @@ export const glassmorphism = {
     },
 };
 
+export const neumorphism = {
+    convex: {
+        backgroundColor: colors.backgroundSecondary,
+        borderColor: colors.border,
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+        borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+        borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        shadowColor: "#000",
+        shadowOffset: { width: 4, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 5,
+        elevation: 5,
+    },
+    concave: {
+        backgroundColor: colors.backgroundSecondary,
+        borderColor: 'transparent',
+        borderWidth: 2,
+        borderTopColor: 'rgba(0, 0, 0, 0.5)',
+        borderLeftColor: 'rgba(0, 0, 0, 0.5)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        borderRightColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    deep: {
+        backgroundColor: '#0a0a0a',
+        borderWidth: 1,
+        borderColor: 'rgba(0, 0, 0, 0.8)',
+        shadowColor: "#fff",
+        shadowOffset: { width: -1, height: -1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 1,
+    }
+};
+
 export const gradients = {
     primary: ['#FCD34D', '#F59E0B'], // Amber Gradient
     secondary: ['#06B6D4', '#22D3EE'],
@@ -262,5 +300,6 @@ export default {
     typography,
     shadows,
     glassmorphism,
+    neumorphism,
     gradients,
 };

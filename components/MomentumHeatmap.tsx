@@ -39,7 +39,10 @@ export const MomentumHeatmap = ({ data, color = colors.primary }: MomentumHeatma
         for (let w = 0; w <= WEEKS_TO_SHOW; w++) {
             const daysInWeek = [];
             for (let d = 0; d < 7; d++) {
-                const dateStr = currentDay.toISOString().split('T')[0];
+                const year = currentDay.getFullYear();
+                const month = String(currentDay.getMonth() + 1).padStart(2, '0');
+                const day = String(currentDay.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
                 const value = dataMap.get(dateStr) || 0;
 
                 daysInWeek.push({

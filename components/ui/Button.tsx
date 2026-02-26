@@ -15,7 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 interface ButtonProps {
     title: string;
     onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'neumorphic';
     size?: 'small' | 'medium' | 'large';
     disabled?: boolean;
     loading?: boolean;
@@ -32,6 +32,8 @@ export const Button: React.FC<ButtonProps> = ({
     style,
 }) => {
     const { colors } = useTheme();
+    const [isPressed, setIsPressed] = React.useState(false);
+
     const handlePress = () => {
         if (!disabled && !loading) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -44,10 +46,12 @@ export const Button: React.FC<ButtonProps> = ({
         {
             backgroundColor: variant === 'primary' ? colors.primary :
                 variant === 'secondary' ? colors.secondary :
-                    variant === 'danger' ? baseColors.error : 'transparent',
+                    variant === 'danger' ? baseColors.error :
+                        variant === 'neumorphic' ? baseColors.backgroundSecondary : 'transparent',
             borderColor: variant === 'ghost' ? baseColors.border : 'transparent',
             borderWidth: variant === 'ghost' ? 1 : 0,
         },
+        variant === 'neumorphic' && (isPressed ? styles.neumorphicInner : styles.neumorphicOuter),
         styles[size],
         disabled && styles.disabled,
         style,
@@ -56,7 +60,8 @@ export const Button: React.FC<ButtonProps> = ({
     const textStyle = [
         styles.text,
         {
-            color: variant === 'ghost' ? colors.primary : baseColors.text,
+            color: variant === 'ghost' ? colors.primary :
+                variant === 'neumorphic' ? colors.primary : baseColors.text,
         },
         styles[`${size}Text`],
     ];
@@ -65,11 +70,13 @@ export const Button: React.FC<ButtonProps> = ({
         <TouchableOpacity
             style={buttonStyle}
             onPress={handlePress}
+            onPressIn={() => setIsPressed(true)}
+            onPressOut={() => setIsPressed(false)}
             disabled={disabled || loading}
-            activeOpacity={0.7}
+            activeOpacity={variant === 'neumorphic' ? 1 : 0.7}
         >
             {loading ? (
-                <ActivityIndicator color={variant === 'ghost' ? colors.primary : baseColors.text} />
+                <ActivityIndicator color={variant === 'ghost' || variant === 'neumorphic' ? colors.primary : baseColors.text} />
             ) : (
                 <Text style={textStyle}>{title}</Text>
             )}
@@ -83,6 +90,31 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
+    },
+    neumorphicOuter: {
+        backgroundColor: baseColors.backgroundSecondary,
+        borderColor: baseColors.border,
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.1)',
+        borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+        borderBottomWidth: 1,
+        borderRightWidth: 1,
+        borderBottomColor: 'rgba(0, 0, 0, 0.5)',
+        borderRightColor: 'rgba(0, 0, 0, 0.5)',
+        shadowColor: "#000",
+        shadowOffset: { width: 4, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 5,
+        elevation: 5,
+    },
+    neumorphicInner: {
+        backgroundColor: baseColors.backgroundSecondary,
+        borderWidth: 2,
+        borderTopColor: 'rgba(0, 0, 0, 0.5)',
+        borderLeftColor: 'rgba(0, 0, 0, 0.5)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+        borderRightColor: 'rgba(255, 255, 255, 0.05)',
     },
 
     // Variant bases removed in favor of dynamic mapping above
